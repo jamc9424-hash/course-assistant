@@ -108,6 +108,9 @@ The implementation provides:
 - material/topic filtering and deterministic multiple-choice quizzes with fixed answer keys;
 - hidden quiz solutions until the solution is explicitly requested through the Python API;
 - Gradio question-answering and quiz/scoring interface.
+- Session-scoped upload and removal controls with SHA-256 content deduplication; removing a document rebuilds the searchable corpus and deletes generated artifacts.
+
+The upload manager accepts PDF, PPTX, DOCX, TXT, and Markdown. Unsupported formats are rejected without entering the store, parser failures are reported without leaving partial artifacts, and re-uploading identical bytes is skipped even if the filename changes.
 
 The baseline runs without class credentials using keyword retrieval. When `CLASS_SERVICE_API_KEY` is present in the ignored local environment, the assistant uses the configured class text embedding, visual embedding, and reranking services. Document parsing is wired through the service client for future image-first ingestion.
 
