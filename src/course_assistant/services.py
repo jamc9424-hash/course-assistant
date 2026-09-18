@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping
@@ -18,6 +19,7 @@ class ServiceSettings:
     reranker_model: str
     parser_endpoint: str
     parser_model: str
+    allow_insecure_http: bool
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "ServiceSettings":
@@ -32,6 +34,7 @@ class ServiceSettings:
             reranker_model=values.get("RERANKER_MODEL", "Qwen/Qwen3-VL-Reranker-2B"),
             parser_endpoint=values.get("DOCUMENT_PARSER_ENDPOINT", "http://dobolyi.com:9005/v1/chat/completions"),
             parser_model=values.get("DOCUMENT_PARSER_MODEL", "dots.mocr"),
+            allow_insecure_http=values.get("CLASS_SERVICE_ALLOW_INSECURE_HTTP", "false").casefold() == "true",
         )
 
 
@@ -51,6 +54,8 @@ class ClassServiceClient:
         self.timeout = timeout
 
     def _post(self, endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
+        if urllib.parse.urlparse(endpoint).scheme == "http" and not self.settings.allow_insecure_http:
+            raise RuntimeError("class service endpoint uses HTTP; enable it only on a trusted class network or use HTTPS")
         request = urllib.request.Request(
             endpoint,
             data=json.dumps(payload).encode("utf-8"),

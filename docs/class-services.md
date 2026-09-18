@@ -1,6 +1,6 @@
 # Class model services
 
-The project is configured to use the class-hosted services below. The API key is a server-side secret and is intentionally absent from this repository. Local clients should load `CLASS_SERVICE_API_KEY` from an ignored `.env` file and send it as an `Authorization: Bearer ...` header.
+The supplied class endpoints currently use plain HTTP. The adapter refuses HTTP unless `CLASS_SERVICE_ALLOW_INSECURE_HTTP=true` is explicitly set. Only enable that flag on the trusted class network; use HTTPS for production whenever available. The API key remains server-side and is intentionally absent from this repository.
 
 All service clients must use the vLLM 0.29.0-compatible request conventions and model-specific Hugging Face templates. Do not infer a request shape from the port alone; keep each adapter explicit and test it against the live service.
 

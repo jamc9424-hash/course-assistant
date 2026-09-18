@@ -16,11 +16,15 @@ class CourseAssistant:
 
     @classmethod
     def from_chunks(cls, chunks: list[DocumentChunk], service_client: object | None = None) -> "CourseAssistant":
-        text_chunks = [chunk for chunk in chunks if chunk.modality == "text"]
-        visual_chunks = [chunk for chunk in chunks if chunk.modality == "visual"]
+        text_chunks = [chunk for chunk in chunks if chunk.text]
+        visual_chunks = [chunk for chunk in chunks if chunk.source.image_path]
         if service_client:
-            retriever = build_service_retriever(list(chunks), service_client)
-            retriever.reranker = ServiceReranker(service_client)
+            try:
+                retriever = build_service_retriever(list(chunks), service_client)
+                retriever.reranker = ServiceReranker(service_client)
+            except RuntimeError:
+                retriever = HybridRetriever(KeywordIndex(text_chunks), KeywordIndex(visual_chunks))
+                service_client = None
         else:
             retriever = HybridRetriever(KeywordIndex(text_chunks), KeywordIndex(visual_chunks))
         return cls(chunks=list(chunks), retriever=retriever, service_client=service_client)
@@ -42,13 +46,20 @@ class CourseAssistant:
         allowed = self._filtered_chunks(material, topic)
         if not allowed:
             return AnswerResponse("I could not find that information in the selected course materials.", ())
-        scoped = CourseAssistant.from_chunks(allowed, service_client=self.service_client)
-        results = scoped.retriever.search(question, top_k=3)
+        try:
+            scoped = CourseAssistant.from_chunks(allowed, service_client=self.service_client)
+            results = scoped.retriever.search(question, top_k=3)
+        except RuntimeError:
+            # Degrade to the local keyword index if a remote service fails at ingest or query time.
+            scoped = CourseAssistant.from_chunks(allowed)
+            results = scoped.retriever.search(question, top_k=3)
         if not results:
             return AnswerResponse("I could not find that information in the selected course materials.", ())
         sources = [item.chunk.source for item in results]
         answer = "Based on the selected course materials: " + " ".join(source.excerpt for source in sources)
-        evidence = {chunk.source.document: chunk.text for chunk in allowed}
+        evidence = {}
+        for chunk in allowed:
+            evidence[chunk.source.document] = evidence.get(chunk.source.document, "") + " " + chunk.text
         return validate_answer(answer, sources, evidence)
 
     def quiz(self, material: str | None = None, topic: str | None = None, question_count: int = 5, seed: int = 0):

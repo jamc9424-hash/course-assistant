@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import base64
 import math
+import mimetypes
 import re
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 from .models import DocumentChunk, RetrievedChunk
@@ -66,6 +69,17 @@ class KeywordIndex:
         return sorted(results, key=lambda item: item.score, reverse=True)[:top_k]
 
 
+def _image_input(path: str | None) -> str | None:
+    if not path:
+        return None
+    image_path = Path(path)
+    if not image_path.is_file():
+        return None
+    media_type = mimetypes.guess_type(image_path.name)[0] or "application/octet-stream"
+    encoded = base64.b64encode(image_path.read_bytes()).decode("ascii")
+    return f"data:{media_type};base64,{encoded}"
+
+
 class VectorIndex:
     def __init__(self, chunks: list[DocumentChunk], vectors: list[list[float]]):
         if len(chunks) != len(vectors):
@@ -119,11 +133,18 @@ class HybridRetriever:
 
 
 def build_service_retriever(chunks: list[DocumentChunk], client: object) -> HybridRetriever:
-    text_chunks = [chunk for chunk in chunks if chunk.modality == "text"]
-    visual_chunks = [chunk for chunk in chunks if chunk.modality == "visual"]
+    # Keep text in the text index even when a chunk also has a visual artifact.
+    text_chunks = [chunk for chunk in chunks if chunk.text]
+    visual_chunks = [chunk for chunk in chunks if chunk.source.image_path]
     text_vectors = client.embed_text([f"passage: {chunk.text}" for chunk in text_chunks]) if text_chunks else []
-    visual_inputs = [{"text": chunk.text, "image": chunk.source.image_path} for chunk in visual_chunks]
-    visual_vectors = client.embed_visual(visual_inputs) if visual_chunks else []
+    visual_inputs = []
+    for chunk in visual_chunks:
+        item = {"text": chunk.text}
+        image = _image_input(chunk.source.image_path)
+        if image:
+            item["image"] = image
+        visual_inputs.append(item)
+    visual_vectors = client.embed_visual(visual_inputs) if visual_inputs else []
     return HybridRetriever(
         KeywordIndex(text_chunks),
         KeywordIndex(visual_chunks),

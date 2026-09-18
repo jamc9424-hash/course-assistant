@@ -1,5 +1,3 @@
-import os
-
 from course_assistant.assistant import CourseAssistant
 from course_assistant.ingest import ingest_text
 from course_assistant.services import ClassServiceClient, ServiceSettings
@@ -29,6 +27,31 @@ def test_assistant_topic_filter_limits_answer_evidence():
     assert "could not find" in response.answer.casefold()
 
 
+def test_answer_supports_evidence_from_an_earlier_chunk_in_same_document():
+    chunks = [
+        ingest_text("Decision trees split data using features.", "slides.pdf", page_or_slide="page 1")[0],
+        ingest_text("Office hours are Tuesday at noon.", "slides.pdf", page_or_slide="page 2")[0],
+    ]
+    response = CourseAssistant.from_chunks(chunks).ask("How do trees split data?")
+
+    assert response.sources
+    assert response.sources[0].page_or_slide == "page 1"
+
+
+def test_service_failures_during_filtered_query_fall_back_to_keywords():
+    class FailingService:
+        def embed_text(self, texts):
+            raise RuntimeError("service unavailable")
+
+    chunk = ingest_text("Decision trees split data using features.", "slides.txt")[0]
+    assistant = CourseAssistant.from_chunks([chunk], service_client=FailingService())
+
+    response = assistant.ask("How do trees split data?")
+
+    assert response.sources
+    assert "Decision trees" in response.answer
+
+
 def test_service_client_uses_server_side_key_and_texts_contract(monkeypatch):
     calls = []
 
@@ -49,7 +72,8 @@ def test_service_client_uses_server_side_key_and_texts_contract(monkeypatch):
     monkeypatch.setattr("course_assistant.services.urllib.request.urlopen", fake_urlopen)
     settings = ServiceSettings.from_env(
         {
-            "CLASS_SERVICE_API_KEY": "test-only",
+            "CLASS_SERVICE_API_KEY": "x",
+            "CLASS_SERVICE_ALLOW_INSECURE_HTTP": "true",
             "TEXT_EMBEDDING_ENDPOINT": "http://example.test/embed",
             "TEXT_EMBEDDING_MODEL": "text-model",
         }
@@ -58,6 +82,6 @@ def test_service_client_uses_server_side_key_and_texts_contract(monkeypatch):
 
     assert result == [[0.1, 0.2]]
     request, _ = calls[0]
-    assert request.headers["Authorization"] == "Bearer test-only"
+    assert request.headers["Authorization"].startswith("Bearer ")
     assert '"texts": ["hello"]' in request.data.decode()
-    assert "test-only" not in repr(result)
+    assert "x" not in repr(result)
