@@ -16,7 +16,13 @@ def _assistant_from_paths(paths: list[str]) -> CourseAssistant:
         chunks.extend(ingest_file(path))
     settings = ServiceSettings.from_env()
     client = ClassServiceClient(settings) if settings.api_key and settings.api_key != "replace-with-local-dummy-value" else None
-    return CourseAssistant.from_chunks(chunks, service_client=client)
+    if client:
+        try:
+            return CourseAssistant.from_chunks(chunks, service_client=client)
+        except RuntimeError:
+            # Keep the app usable when a class service is temporarily unavailable.
+            pass
+    return CourseAssistant.from_chunks(chunks)
 
 
 def _answer(paths: list[str], material: str, topic: str, question: str) -> tuple[dict[str, Any], str | None]:

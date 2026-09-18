@@ -17,7 +17,12 @@ def load_assistant(paths: list[str]) -> CourseAssistant:
         raise ValueError("no readable text was found in the supplied materials")
     settings = ServiceSettings.from_env()
     client = ClassServiceClient(settings) if settings.api_key and settings.api_key != "replace-with-local-dummy-value" else None
-    return CourseAssistant.from_chunks(chunks, service_client=client)
+    if client:
+        try:
+            return CourseAssistant.from_chunks(chunks, service_client=client)
+        except RuntimeError:
+            pass
+    return CourseAssistant.from_chunks(chunks)
 
 
 def main() -> int:

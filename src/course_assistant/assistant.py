@@ -12,6 +12,7 @@ from .retrieval import HybridRetriever, KeywordIndex, build_service_retriever
 class CourseAssistant:
     chunks: list[DocumentChunk]
     retriever: HybridRetriever
+    service_client: object | None = None
 
     @classmethod
     def from_chunks(cls, chunks: list[DocumentChunk], service_client: object | None = None) -> "CourseAssistant":
@@ -22,7 +23,7 @@ class CourseAssistant:
             retriever.reranker = ServiceReranker(service_client)
         else:
             retriever = HybridRetriever(KeywordIndex(text_chunks), KeywordIndex(visual_chunks))
-        return cls(chunks=list(chunks), retriever=retriever)
+        return cls(chunks=list(chunks), retriever=retriever, service_client=service_client)
 
     def _filtered_chunks(self, material: str | None, topic: str | None) -> list[DocumentChunk]:
         result = self.chunks
@@ -41,7 +42,7 @@ class CourseAssistant:
         allowed = self._filtered_chunks(material, topic)
         if not allowed:
             return AnswerResponse("I could not find that information in the selected course materials.", ())
-        scoped = CourseAssistant.from_chunks(allowed)
+        scoped = CourseAssistant.from_chunks(allowed, service_client=self.service_client)
         results = scoped.retriever.search(question, top_k=3)
         if not results:
             return AnswerResponse("I could not find that information in the selected course materials.", ())
