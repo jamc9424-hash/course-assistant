@@ -1,5 +1,8 @@
-# Candidate implementation dependencies; pin and move selected packages into requirements.txt after comparison.
+# Optional runtime/UI dependencies. The keyword baseline and tests use the Python standard library.
+PyMuPDF
+python-pptx
+python-docx
+gradio
 bm25s
 chromadb
-gradio
 langchain-text-splitters

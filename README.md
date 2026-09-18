@@ -80,6 +80,46 @@ The project is currently in repository setup. Add benchmark materials only when 
 
 Screenshots and findings will be added to `docs/` as the interface becomes available.
 
+## JamesBranch implementation
+
+The first vertical slice is available on `JamesBranch`:
+
+```bash
+python -m venv .venv
+# Windows: .venv\\Scripts\\activate
+pip install -r requirements.txt
+pip install -r requirements-optional.txt  # file parsing and Gradio UI
+python -m course_assistant.app
+```
+
+For a dependency-light question-answering smoke test:
+
+```bash
+PYTHONPATH=src python -m course_assistant.cli notes.txt --question "What does the material say?"
+```
+
+The implementation provides:
+
+- PDF, PPTX, DOCX, TXT, and Markdown ingestion paths;
+- PDF page image preservation and source page/slide metadata;
+- separate keyword and visual indexes, optional text/visual embedding indexes, and reranking adapters;
+- structured answers with `answer` and `sources` fields;
+- missing-information responses when retrieval finds no supporting evidence;
+- material/topic filtering and deterministic multiple-choice quizzes with fixed answer keys;
+- hidden quiz solutions until the solution is explicitly requested through the Python API;
+- Gradio question-answering and quiz/scoring interface.
+
+The baseline runs without class credentials using keyword retrieval. When `CLASS_SERVICE_API_KEY` is present in the ignored local environment, the assistant uses the configured class text embedding, visual embedding, and reranking services. Document parsing is wired through the service client for future image-first ingestion.
+
+## Current findings and limitations
+
+- The live class endpoints were connectivity-tested and their request contracts are documented in `docs/class-services.md`.
+- The current answer generator is extractive and conservative; it does not yet call a generative vision-capable LLM because a generation endpoint was not included in the supplied service map.
+- PPTX and DOCX preserve text/source locations, but PDF is currently the only parser that renders original page images automatically.
+- The quiz generator is a deterministic baseline for evaluating retrieval and evidence behavior, not a final pedagogical question writer.
+- Automated tests cover the dependency-light core, security configuration, source validation, answer-key stability, and service request construction. Live service calls are not run in CI.
+- No production screenshots or course-material benchmark results are committed yet; those require permitted Canvas materials.
+
 ## License
 
 TBD by the project team.

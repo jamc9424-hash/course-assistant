@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: course-assistant
+Version: 0.1.0
+Summary: Grounded course question answering and practice quizzes
+Requires-Python: >=3.11
