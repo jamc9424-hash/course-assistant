@@ -10,6 +10,7 @@ venv/
 !.env.example
 *.log
 .DS_Store
+*.egg-info/
 .vscode/
 .idea/
 
