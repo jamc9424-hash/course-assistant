@@ -106,7 +106,7 @@ The implementation provides:
 - structured answers with `answer` and `sources` fields;
 - missing-information responses when retrieval finds no supporting evidence;
 - material/topic filtering and deterministic multiple-choice quizzes with fixed answer keys;
-- hidden quiz solutions until the solution is explicitly requested through the Python API;
+- hidden quiz solutions until the quiz taker answers a question or explicitly requests its solution; answered feedback includes the score, correct/selected choice, explanation, and supporting source;
 - Gradio question-answering and quiz/scoring interface.
 - Session-scoped upload and removal controls with SHA-256 content deduplication; removing a document rebuilds the searchable corpus and deletes generated artifacts.
 - Visual RAG returns retrieved slide images with document and page/slide captions. When the parser service is available, visual sources also receive a conservative description of visible pictures, memes, diagrams, and charts.

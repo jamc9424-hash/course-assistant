@@ -82,13 +82,20 @@ def _quiz(store: MaterialStore | None, material: str, topic: str, count: int) ->
     return json.dumps({"questions": [question.public_dict() for question in quiz.questions]}, indent=2), quiz
 
 
-def _score(quiz: Quiz | None, answers_json: str) -> str:
+def _score(quiz: Quiz | None, answers_json: str, reveal_question_id: str) -> str:
     if quiz is None:
         return json.dumps({"error": "generate a quiz first"})
     try:
         answers = json.loads(answers_json or "{}")
-        from .quiz import score_quiz
-        return json.dumps(score_quiz(quiz, {str(k): int(v) for k, v in answers.items()}), indent=2)
+        from .quiz import feedback_quiz
+        return json.dumps(
+            feedback_quiz(
+                quiz,
+                {str(k): int(v) for k, v in answers.items()},
+                reveal_question_id=reveal_question_id.strip() or None,
+            ),
+            indent=2,
+        )
     except (ValueError, TypeError, json.JSONDecodeError) as exc:
         return json.dumps({"error": f"answers must be a JSON object of question_id to choice index: {exc}"})
 
@@ -128,8 +135,9 @@ def build_app():
             quiz_state = gr.State(None)
             gr.Button("Generate quiz").click(_quiz, [store_state, material, topic, count], [quiz_output, quiz_state])
             answers = gr.Code(value="{}", label="Answers JSON, e.g. {\"q1\": 0}", language="json")
-            score = gr.Code(label="Score", language="json")
-            gr.Button("Score quiz").click(_score, [quiz_state, answers], score)
+            reveal_id = gr.Textbox(label="Request solution for question ID (optional)")
+            score = gr.Code(label="Score and feedback", language="json")
+            gr.Button("Score quiz / show answered feedback").click(_score, [quiz_state, answers, reveal_id], score)
     return demo
 
 

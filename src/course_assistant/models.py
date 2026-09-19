@@ -95,4 +95,9 @@ def validate_answer(
 def reveal_question(question: QuizQuestion) -> QuizQuestion:
     if question.explanation:
         return question
-    return replace(question, explanation=f"The selected course material supports: {question.choices[question.correct_choice]}")
+    location = question.source.page_or_slide or question.source.section or "the selected material"
+    explanation = (
+        f"The correct statement is supported by {question.source.document}, {location}: "
+        f"{question.source.excerpt}"
+    )
+    return replace(question, explanation=explanation)
