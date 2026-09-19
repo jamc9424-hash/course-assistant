@@ -11,6 +11,7 @@ class SourceEvidence:
     section: str | None = None
     excerpt: str = ""
     image_path: str | None = None
+    visual_description: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -19,6 +20,7 @@ class SourceEvidence:
             "section": self.section,
             "excerpt": self.excerpt,
             "image_path": self.image_path,
+            "visual_description": self.visual_description,
         }
 
 

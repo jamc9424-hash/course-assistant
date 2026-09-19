@@ -62,12 +62,16 @@ def _remove_file(document_id: str | None, store: MaterialStore | None):
     return store, _material_view(store), status
 
 
-def _answer(store: MaterialStore | None, material: str, topic: str, question: str) -> tuple[dict[str, Any], str | None]:
+def _answer(store: MaterialStore | None, material: str, topic: str, question: str) -> tuple[dict[str, Any], list[tuple[str, str]]]:
     if not question.strip():
-        return {"answer": "Enter a question.", "sources": []}, None
+        return {"answer": "Enter a question.", "sources": []}, []
     response = _assistant_from_store(store or MaterialStore()).ask(question, material or None, topic or None)
-    image_path = next((source.image_path for source in response.sources if source.image_path), None)
-    return response.as_dict(), image_path
+    image_paths = []
+    for source in response.sources:
+        if source.image_path:
+            location = source.page_or_slide or source.section or "source visual"
+            image_paths.append((source.image_path, f"{source.document} — {location}"))
+    return response.as_dict(), list(dict.fromkeys(image_paths))
 
 
 def _quiz(store: MaterialStore | None, material: str, topic: str, count: int) -> tuple[str, Quiz | None]:
@@ -116,7 +120,7 @@ def build_app():
         with gr.Tab("Ask"):
             question = gr.Textbox(label="Question")
             answer = gr.JSON(label="Answer and sources")
-            evidence_image = gr.Image(label="Visual evidence", type="filepath")
+            evidence_image = gr.Gallery(label="Retrieved slide images", columns=2, height="auto")
             gr.Button("Answer").click(_answer, [store_state, material, topic, question], [answer, evidence_image])
         with gr.Tab("Practice quiz"):
             count = gr.Number(value=5, minimum=1, maximum=20, precision=0, label="Question count")

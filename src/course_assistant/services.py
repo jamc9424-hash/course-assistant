@@ -1,11 +1,25 @@
 from __future__ import annotations
 
+import base64
 import json
+import mimetypes
 import os
+from pathlib import Path
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Any, Callable, Mapping
+
+
+
+
+def image_path_to_data_url(path: str) -> str:
+    image_path = Path(path)
+    if not image_path.is_file():
+        raise FileNotFoundError(path)
+    media_type = mimetypes.guess_type(image_path.name)[0] or "application/octet-stream"
+    encoded = base64.b64encode(image_path.read_bytes()).decode("ascii")
+    return f"data:{media_type};base64,{encoded}"
 
 
 @dataclass(frozen=True)

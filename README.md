@@ -109,6 +109,7 @@ The implementation provides:
 - hidden quiz solutions until the solution is explicitly requested through the Python API;
 - Gradio question-answering and quiz/scoring interface.
 - Session-scoped upload and removal controls with SHA-256 content deduplication; removing a document rebuilds the searchable corpus and deletes generated artifacts.
+- Visual RAG returns retrieved slide images with document and page/slide captions. When the parser service is available, visual sources also receive a conservative description of visible pictures, memes, diagrams, and charts.
 
 The upload manager accepts PDF, PPTX, DOCX, TXT, and Markdown. Unsupported formats are rejected without entering the store, parser failures are reported without leaving partial artifacts, and re-uploading identical bytes is skipped even if the filename changes.
 

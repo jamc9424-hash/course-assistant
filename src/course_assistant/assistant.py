@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import Any
 
 from .models import AnswerResponse, DocumentChunk, SourceEvidence, validate_answer
 from .quiz import build_quiz
-from .services import ServiceReranker
+from .services import ServiceReranker, image_path_to_data_url
 from .retrieval import HybridRetriever, KeywordIndex, build_service_retriever
 
 
@@ -42,6 +43,25 @@ class CourseAssistant:
             ]
         return result
 
+    def _describe_visual(self, source: SourceEvidence) -> str | None:
+        if not self.service_client or not source.image_path:
+            return None
+        parser = getattr(self.service_client, "parse_image", None)
+        if parser is None:
+            return None
+        instruction = (
+            "Describe and explain the retrieved slide visual evidence. Identify relevant pictures, memes, "
+            "diagrams, charts, labels, and relationships. Do not guess details that are not visible."
+        )
+        try:
+            response = parser(image_path_to_data_url(source.image_path), instruction)
+            content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if isinstance(content, list):
+                content = " ".join(part.get("text", "") for part in content if isinstance(part, dict))
+            return str(content).strip() or None
+        except (OSError, RuntimeError, KeyError, IndexError, TypeError):
+            return None
+
     def ask(self, question: str, material: str | None = None, topic: str | None = None) -> AnswerResponse:
         allowed = self._filtered_chunks(material, topic)
         if not allowed:
@@ -55,8 +75,18 @@ class CourseAssistant:
             results = scoped.retriever.search(question, top_k=3)
         if not results:
             return AnswerResponse("I could not find that information in the selected course materials.", ())
-        sources = [item.chunk.source for item in results]
+        sources = []
+        visual_explanations = []
+        for item in results:
+            source = item.chunk.source
+            description = self._describe_visual(source)
+            if description:
+                source = replace(source, visual_description=description)
+                visual_explanations.append(description)
+            sources.append(source)
         answer = "Based on the selected course materials: " + " ".join(source.excerpt for source in sources)
+        if visual_explanations:
+            answer += " Visual evidence explanation: " + " ".join(visual_explanations)
         evidence = {}
         for chunk in allowed:
             evidence[chunk.source.document] = evidence.get(chunk.source.document, "") + " " + chunk.text
