@@ -1,0 +1,18 @@
+{
+  "course_materials": "not supplied in repository",
+  "questions": [
+    {"id": "Q1", "status": "pending-course-material-run"},
+    {"id": "Q2", "status": "pending-course-material-run"},
+    {"id": "Q3", "status": "pending-course-material-run"},
+    {"id": "Q4", "status": "pending-course-material-run"},
+    {"id": "Q5", "status": "pending-course-material-run"},
+    {"id": "Q6", "status": "pending-course-material-run", "visual_case": "Vibe Coding on Prod meme"},
+    {"id": "Q7", "status": "pending-course-material-run"},
+    {"id": "Q8", "status": "automated-missing-information-check"}
+  ],
+  "comparison": {
+    "keyword_baseline": "not run without permitted Canvas files",
+    "hybrid_embeddings_reranking": "not run without permitted Canvas files",
+    "interpretation": "No course-quality conclusion is claimed until the same permitted files and questions are run through both paths."
+  }
+}

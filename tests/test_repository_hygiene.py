@@ -21,6 +21,17 @@ def test_course_materials_are_ignored():
     assert "*.pdf" in gitignore
 
 
+def test_assignment_artifacts_are_present_and_documented():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert (ROOT / "docs" / "architecture.svg").is_file()
+    assert (ROOT / "docs" / "evaluation.md").is_file()
+    assert (ROOT / "docs" / "evaluation-results.json").is_file()
+    assert (ROOT / "docs" / "screenshots" / "answer-with-slide.png").is_file()
+    assert (ROOT / "docs" / "screenshots" / "quiz-feedback.png").is_file()
+    assert "docs/architecture.svg" in readme
+    assert "docs/screenshots/answer-with-slide.png" in readme
+
+
 def test_class_service_configuration_is_documented_without_key():
     env_example = (ROOT / ".env.example").read_text(encoding="utf-8")
     service_doc = (ROOT / "docs" / "class-services.md").read_text(encoding="utf-8")

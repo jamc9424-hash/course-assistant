@@ -1,30 +1,44 @@
-# Evaluation record
+# Assignment 2 evaluation record
 
-## Branch
+This evaluation record is committed with the app so another teammate can repeat it. The repository does not contain Canvas course files; uploading copyrighted course material to a public repository is intentionally prohibited. The rows below are the required evaluation set and are marked pending until the team runs them with the permitted Week 2 slides and syllabus.
 
-`JamesBranch` implements the dependency-light vertical slice first, then adds optional class-service retrieval behind the same interface.
+## Question set
 
-## Design comparison
-
-| Choice | Baseline | Optional service path | Current finding |
+| ID | Question | Required evidence | Status |
 |---|---|---|---|
-| Initial retrieval | Dependency-free BM25-style keyword index | Nemotron text embeddings plus Qwen visual embeddings | Baseline is reproducible offline; service path is wired but needs permitted course fixtures for quality comparison |
-| Candidate ranking | Score merge across separate text/visual indexes | Score merge followed by Qwen multimodal reranking | Live endpoint contracts were verified; ranking quality remains unchecked without a benchmark set |
-| Answer generation | Extractive answer from supporting excerpts | Same conservative evidence boundary | Prevents unsupported claims while the supplied generation endpoint remains unspecified |
+| Q1 | What does the syllabus say about the final project deadline? | Syllabus section/excerpt | Pending course-material run |
+| Q2 | How are office hours or instructor contact options described? | Syllabus section/excerpt | Pending course-material run |
+| Q3 | What is the main concept introduced in the Week 2 slides? | Slide number + excerpt | Pending course-material run |
+| Q4 | What does the diagram on the retrieval slide show? | Actual slide image + slide number | Pending course-material run |
+| Q5 | What trend does the chart on the evaluation slide show? | Actual slide image + chart explanation | Pending course-material run |
+| Q6 | What does the “Vibe Coding on Prod” meme communicate? | Actual Week 2 slide image + visual description | Pending course-material run |
+| Q7 | How does the slide compare the two approaches shown in its visual? | Actual slide image + supporting text | Pending course-material run |
+| Q8 | What is the answer to a topic that is absent from the uploaded materials? | Empty sources + missing-information response | Covered by automated tests |
 
-## Repeatable checks
+Q4–Q7 are deliberately visual cases. Q6 is the required meme retrieval case.
 
-```bash
-uv run --with pytest pytest -q
-python -m compileall -q src
-```
+## Comparison protocol
 
-The current suite checks ingestion metadata, text/visual index separation, source-support validation, missing-information behavior, fixed quiz keys, secure service request construction, and repository hygiene.
+Run the same question set and the same permitted course files through:
 
-## Not yet checked
+1. **Keyword baseline:** BM25-style keyword retrieval without class-service embeddings or reranking.
+2. **Hybrid path:** keyword retrieval plus text embeddings, visual embeddings, and multimodal reranking when the class services are configured.
 
-- Retrieval recall and reranking accuracy on real Canvas slides, diagrams, and charts
-- Latency and failure behavior against all services during a complete ingest/query session
-- PPTX/DOCX visual rendering fidelity
-- Gradio interaction tests and production screenshots
-- Answer quality from a vision-capable generation service; no generation endpoint was provided in the current endpoint set
+For every row, record:
+
+- answer correctness: yes/no/partial;
+- whether every source supports the answer;
+- document and page/slide returned;
+- whether the expected image was displayed;
+- latency in milliseconds;
+- failure or missing-information behavior.
+
+The intended saved-results format is `docs/evaluation-results.json`. Do not commit course files, slide screenshots, API keys, or student data.
+
+## Current automated findings
+
+The dependency-light suite verifies source-support validation, visual source metadata, parser-backed visual descriptions, missing-information behavior, quiz grounding, quiz feedback, upload/removal, duplicate prevention, and model-service fallback. The live course-material comparison is not claimed here because the required Canvas files have not been supplied.
+
+## Interpretation rule
+
+Keep the hybrid path if it improves supported-answer rate or visual-slide recall without unacceptable latency or unsupported citations. Keep the keyword fallback as a reliability path when remote services are unavailable.

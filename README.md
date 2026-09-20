@@ -47,21 +47,31 @@ The class service map is documented in [`docs/class-services.md`](docs/class-ser
 
 ## Local setup
 
-The implementation is being developed incrementally. The expected setup is:
+From a fresh clone:
 
 ```bash
 python -m venv .venv
 # Windows: .venv\\Scripts\\activate
 # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
+pip install -e .
+pip install -r requirements-optional.txt  # file parsing and Gradio UI
 pytest
 ```
 
-Use dummy values in examples. Never place real keys in source, browser code, logs, screenshots, documentation, or test artifacts.
+Launch the interface with:
+
+```bash
+python -m course_assistant.app
+```
+
+Copy `.env.example` to `.env` only for local use, then load it into the server environment before launch. The real class API key must never be placed in source, browser code, logs, screenshots, documentation, test results, or GitHub. The supplied class endpoints use HTTP; set `CLASS_SERVICE_ALLOW_INSECURE_HTTP=true` only on the trusted class network. Use HTTPS for production whenever available.
 
 ## Supported input policy
 
-The finished app will document its tested formats explicitly. The target set is PDF, PPTX, DOCX, TXT, and Markdown, with page/slide rendering where the format supports it. Unsupported or malformed files should receive a clear error rather than partial, untraceable ingestion.
+The upload manager accepts PDF, PPTX, DOCX, TXT, and Markdown. PDF files are rendered page-by-page into original page images. PPTX files are accepted directly for text and slide metadata; for reliable original slide-image evidence, export the deck to PDF before upload. Manual export is the supported workaround when LibreOffice is not installed. Optional LibreOffice/`soffice` automation can be added later, but is not required by the current implementation. Unsupported or malformed files receive a clear error without partial searchable content.
+
+In the app, upload files through **Add course materials**. The uploaded-material list shows each content ID. Enter that ID under **Remove document** to remove its chunks and generated artifacts from the active session. Identical file content is skipped on repeat upload.
 
 ## Evidence policy
 
@@ -115,6 +125,28 @@ The upload manager accepts PDF, PPTX, DOCX, TXT, and Markdown. Unsupported forma
 
 The baseline runs without class credentials using keyword retrieval. When `CLASS_SERVICE_API_KEY` is present in the ignored local environment, the assistant uses the configured class text embedding, visual embedding, and reranking services. Document parsing is wired through the service client for future image-first ingestion.
 
+## Architecture
+
+![Hybrid multimodal RAG architecture](docs/architecture.svg)
+
+The SVG matches the implemented flow: upload and deduplicate material, parse text and PDF page images, maintain separate keyword/text/visual indexes, merge and rerank candidates, validate source support, then display answers, sources, slide images, and quizzes.
+
+## Evaluation report
+
+The assignment question set, comparison protocol, saved results, and explicit course-material limitations are in [`docs/evaluation.md`](docs/evaluation.md) and [`docs/evaluation-results.json`](docs/evaluation-results.json). The required “Vibe Coding on Prod” meme case is included as Q6. It remains pending until the permitted Week 2 slides are provided; no fabricated course result is reported. The manual and automated verification checklist is in [`docs/manual-verification.md`](docs/manual-verification.md).
+
+## Screenshots
+
+Screenshots were captured from the running Gradio app using a synthetic, non-course demo PDF so no restricted Canvas content is redistributed. Replace these with permitted course-material captures before submission if the team has approval.
+
+### Answer with retrieved slide
+
+![Course Assistant answer with retrieved slide](docs/screenshots/answer-with-slide.png)
+
+### Quiz feedback with source
+
+![Course Assistant quiz feedback with source](docs/screenshots/quiz-feedback.png)
+
 ## Current findings and limitations
 
 - The live class endpoints were connectivity-tested and their request contracts are documented in `docs/class-services.md`.
@@ -122,7 +154,7 @@ The baseline runs without class credentials using keyword retrieval. When `CLASS
 - PPTX and DOCX preserve text/source locations, but PDF is currently the only parser that renders original page images automatically.
 - The quiz generator is a deterministic baseline for evaluating retrieval and evidence behavior, not a final pedagogical question writer.
 - Automated tests cover the dependency-light core, security configuration, source validation, answer-key stability, and service request construction. Live service calls are not run in CI.
-- No production screenshots or course-material benchmark results are committed yet; those require permitted Canvas materials.
+- Synthetic app screenshots are committed; course-material benchmark results remain pending because permitted Canvas files were not supplied.
 
 ## License
 
