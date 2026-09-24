@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 838" font-family="-apple-system,'Segoe UI',system-ui,sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#0b1020"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#94a3b8"/>
+    </marker>
+  </defs>
+  <rect width="1240" height="838" fill="url(#bg)"/>
+  <text x="40" y="46" fill="#e2e8f0" font-size="24" font-weight="700">Course Assistant — architecture</text>
+  <text x="40" y="70" fill="#94a3b8" font-size="13">Grounded hybrid RAG · keyword + text-embedding + visual-embedding pipelines · evidence-checked answers &amp; quizzes</text>
+
+  <!-- ================= 1. Ingest ================= -->
+  <g font-size="12">
+    <rect x="40" y="96" width="1160" height="104" rx="14" fill="#1e293b" stroke="#334155"/>
+    <text x="60" y="120" fill="#c7d2fe" font-size="13" font-weight="600">①  Ingest</text>
+    <rect x="60"   y="132" width="120" height="46" rx="8" fill="#cbd5e1"/>
+    <rect x="200"  y="132" width="120" height="46" rx="8" fill="#cbd5e1"/>
+    <rect x="340"  y="132" width="120" height="46" rx="8" fill="#cbd5e1"/>
+    <rect x="480"  y="132" width="120" height="46" rx="8" fill="#cbd5e1"/>
+    <rect x="620"  y="122" width="210" height="66" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
+    <rect x="870"  y="132" width="310" height="46" rx="8" fill="#e0e7ff"/>
+    <text x="120" y="149" fill="#0f172a" text-anchor="middle">PDF</text>
+    <text x="120" y="164" fill="#64748b" text-anchor="middle" font-size="10">native text+render</text>
+    <text x="260" y="149" fill="#0f172a" text-anchor="middle">PPTX</text>
+    <text x="260" y="164" fill="#64748b" text-anchor="middle" font-size="10">slides text</text>
+    <text x="400" y="149" fill="#0f172a" text-anchor="middle">DOCX</text>
+    <text x="400" y="164" fill="#64748b" text-anchor="middle" font-size="10">paragraph text</text>
+    <text x="540" y="149" fill="#0f172a" text-anchor="middle">TXT / MD</text>
+    <text x="540" y="164" fill="#64748b" text-anchor="middle" font-size="10">plain text</text>
+    <text x="725" y="142" fill="#92400e" text-anchor="middle" font-size="11" font-weight="600">OCR fallback</text>
+    <text x="725" y="156" fill="#92400e" text-anchor="middle" font-size="10">scanned / image pages</text>
+    <text x="725" y="170" fill="#92400e" text-anchor="middle" font-size="10">(doc parser :9005)</text>
+    <text x="1025" y="149" fill="#0f172a" text-anchor="middle">Document management</text>
+    <text x="1025" y="164" fill="#64748b" text-anchor="middle" font-size="10">add / remove · content-hash dedupe</text>
+    <text x="1025" y="178" fill="#64748b" text-anchor="middle" font-size="10">removal drops vectors + chunk</text>
+  </g>
+
+  <!-- ================= 2. Parse & render ================= -->
+  <line x1="620" y1="200" x2="620" y2="236" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="380" y="238" width="480" height="84" rx="12" fill="#1e293b" stroke="#334155"/>
+  <text x="620" y="262" fill="#e2e8f0" text-anchor="middle" font-size="13" font-weight="600">②  Parse &amp; render</text>
+  <text x="620" y="282" fill="#94a3b8" text-anchor="middle" font-size="11">text chunks carrying source · doc / page / section / excerpt</text>
+  <text x="620" y="300" fill="#94a3b8" text-anchor="middle" font-size="11">visual records → one PNG per page / slide (original image preserved)</text>
+
+  <!-- split to three pipelines -->
+  <line x1="470" y1="322" x2="235" y2="394" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="620" y1="322" x2="580" y2="394" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="770" y1="322" x2="925" y2="394" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ================= 3. Three indexes ================= -->
+  <g font-size="12">
+    <rect x="70"  y="394" width="330" height="116" rx="12" fill="#1e293b" stroke="#334155"/>
+    <rect x="96"  y="412" width="278" height="32" rx="6" fill="#334155"/>
+    <text x="235" y="433" fill="#e2e8f0" text-anchor="middle" font-size="12" font-weight="600">Keyword index (BM25)</text>
+    <text x="235" y="462" fill="#94a3b8" text-anchor="middle" font-size="11">bm25s over text chunks</text>
+    <text x="235" y="484" fill="#64748b" text-anchor="middle" font-size="10">local · offline</text>
+
+    <rect x="415" y="394" width="330" height="116" rx="12" fill="#1e293b" stroke="#334155"/>
+    <rect x="441" y="412" width="278" height="32" rx="6" fill="#334155"/>
+    <text x="580" y="433" fill="#e2e8f0" text-anchor="middle" font-size="12" font-weight="600">Text vector index</text>
+    <text x="580" y="462" fill="#94a3b8" text-anchor="middle" font-size="11">cosine · Nemotron-Embed :9002</text>
+    <text x="580" y="484" fill="#64748b" text-anchor="middle" font-size="10">dim 2048 · NumPy store</text>
+
+    <rect x="760" y="394" width="330" height="116" rx="12" fill="#1e293b" stroke="#334155"/>
+    <rect x="786" y="412" width="278" height="32" rx="6" fill="#334155"/>
+    <text x="925" y="433" fill="#e2e8f0" text-anchor="middle" font-size="12" font-weight="600">Visual vector index</text>
+    <text x="925" y="462" fill="#94a3b8" text-anchor="middle" font-size="11">Qwen3-VL-Embedding :9003</text>
+    <text x="925" y="484" fill="#64748b" text-anchor="middle" font-size="10">slide-image embeddings + captions</text>
+  </g>
+
+  <!-- ================= 4. Merge + rerank ================= -->
+  <line x1="235" y1="510" x2="520" y2="566" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="580" y1="510" x2="580" y2="566" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="925" y1="510" x2="660" y2="566" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="360" y="568" width="440" height="122" rx="12" fill="url(#accent)" stroke="#818cf8"/>
+  <text x="580" y="594" fill="#ffffff" text-anchor="middle" font-size="14" font-weight="700">③  Candidate merge + rerank</text>
+  <text x="580" y="616" fill="#ede9fe" text-anchor="middle" font-size="11">RRF merge of keyword · text-vector · visual-vector hits</text>
+  <text x="580" y="636" fill="#ede9fe" text-anchor="middle" font-size="11">multimodal reranker Qwen3-VL-Reranker :9004</text>
+  <text x="580" y="656" fill="#ede9fe" text-anchor="middle" font-size="11">top evidence = text excerpts + slide images</text>
+  <text x="580" y="678" fill="#ede9fe" text-anchor="middle" font-size="10">evaluation compares rerank ON vs OFF</text>
+
+  <!-- ================= 5. Generate + validate ================= -->
+  <line x1="580" y1="690" x2="580" y2="724" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="40" y="726" width="1160" height="66" rx="12" fill="#1e293b" stroke="#334155"/>
+  <text x="620" y="752" fill="#e2e8f0" text-anchor="middle" font-size="13" font-weight="600">④  Generate + validate</text>
+  <text x="620" y="774" fill="#94a3b8" text-anchor="middle" font-size="11">vision LLM :9001 (Qwen3.6) · structured JSON {answer, sources} · schema check · source-support = citations ⊆ retrieved evidence · quiz keys hidden until answered</text>
+
+  <text x="1180" y="818" text-anchor="end" fill="#64748b" font-size="11">class services dobolyi.com :9001–:9005 · keys only via .env / environment</text>
+</svg>

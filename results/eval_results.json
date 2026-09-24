@@ -1,0 +1,531 @@
+{
+  "summary": {
+    "material_count": 2,
+    "question_count": 8,
+    "rerank_on": 1.0,
+    "rerank_off": 1.0
+  },
+  "conditions": {
+    "rerank_True": {
+      "rerank": true,
+      "questions_run": 8,
+      "correct": 8,
+      "correct_rate": 1.0,
+      "avg_latency_ms": 1887.9,
+      "supported_sources_rate": 1.0,
+      "rows": [
+        {
+          "id": "t1",
+          "type": "text",
+          "question": "According to the Week 2 slides, what three parts make up hybrid retrieval?",
+          "rerank": true,
+          "answer": "According to the Week 2 slides, hybrid retrieval is made up of keyword, text embeddings, and visual embeddings.",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 3,
+          "source_pages": [
+            "week2_sample_slides:2",
+            "week2_sample_slides:2",
+            "week2_sample_slides:2"
+          ],
+          "have_image": true,
+          "latency_ms": 1938.8,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4,
+            "reranked": true
+          },
+          "correct": true,
+          "method": "grounded+phrase",
+          "phrase_hit": true
+        },
+        {
+          "id": "t2",
+          "type": "text",
+          "question": "What is the assistant's evidence policy when the materials do not support an answer?",
+          "rerank": true,
+          "answer": "When the materials do not establish an answer, the assistant's policy is to say so and never invent facts or citations.",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 3,
+          "source_pages": [
+            "week2_sample_slides:5",
+            "week2_sample_slides:5",
+            "week2_sample_slides:5"
+          ],
+          "have_image": true,
+          "latency_ms": 1459.9,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4,
+            "reranked": true
+          },
+          "correct": true,
+          "method": "grounded+phrase",
+          "phrase_hit": true
+        },
+        {
+          "id": "t3",
+          "type": "text",
+          "question": "How are practice-quiz answer keys handled in this course assistant?",
+          "rerank": true,
+          "answer": "Practice-quiz answer keys are fixed and remain hidden until the student answers the question or explicitly requests the key. Additionally, the explanations provided for the answers point back to a specific slide or section of the course material.",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 5,
+          "source_pages": [
+            "week2_sample_slides:6",
+            "week2_sample_slides:6",
+            "week2_sample_slides:6",
+            "week2_sample_slides:2",
+            "week2_sample_slides:2"
+          ],
+          "have_image": true,
+          "latency_ms": 2328.8,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4,
+            "reranked": true
+          },
+          "correct": true,
+          "method": "grounded+phrase",
+          "phrase_hit": true
+        },
+        {
+          "id": "t4",
+          "type": "text",
+          "question": "According to the syllabus, which part of the grade is worth 40 percent?",
+          "rerank": true,
+          "answer": "According to the syllabus, grounded answers are worth 40 percent of the grade.",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 1,
+          "source_pages": [
+            "syllabus_sample:1"
+          ],
+          "have_image": false,
+          "latency_ms": 1476.0,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4,
+            "reranked": true
+          },
+          "correct": true,
+          "method": "grounded+phrase",
+          "phrase_hit": true
+        },
+        {
+          "id": "t5",
+          "type": "text",
+          "question": "Does this course require a textbook?",
+          "rerank": true,
+          "answer": "No, this course does not require a textbook; all materials are provided on Canvas.",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 1,
+          "source_pages": [
+            "syllabus_sample:1"
+          ],
+          "have_image": false,
+          "latency_ms": 1805.3,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4,
+            "reranked": true
+          },
+          "correct": true,
+          "method": "grounded+phrase",
+          "phrase_hit": true
+        },
+        {
+          "id": "v1",
+          "type": "visual",
+          "question": "Find the slide with the Vibe Coding on Prod meme and describe what the image and text show.",
+          "rerank": true,
+          "answer": "The slide titled \"Vibe Coding on Prod (meme)\" features a meme format. At the top, there is a black bar with the text \"VIBE CODING on PROD\". Below that, there is a large red circle obscuring a portion of a second black bar. The visible text on the bottom bar reads \"IN MY HEAD / OH NO\".",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 3,
+          "source_pages": [
+            "week2_sample_slides:3",
+            "week2_sample_slides:3",
+            "week2_sample_slides:3"
+          ],
+          "have_image": true,
+          "latency_ms": 1955.1,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4,
+            "reranked": true
+          },
+          "correct": true,
+          "method": "grounded+phrase+image",
+          "phrase_hit": true
+        },
+        {
+          "id": "v2",
+          "type": "visual",
+          "question": "Describe the hybrid RAG architecture diagram on the slides (what boxes and arrows connect).",
+          "rerank": true,
+          "answer": "The Hybrid RAG architecture diagram (labeled \"RAG pipeline diagram\") features a large blue box containing three input boxes at the top: \"PDFs\", \"Slides\", and \"Text\". Arrows connect the \"Slides\" and \"Text\" boxes to a \"Retrieve\" box located on the right side of the diagram. The \"PDFs\" box does not have a visible arrow connecting to the \"Retrieve\" box in the diagram. Below the main blue box, there is a partially visible box labeled \"Answer/Gen\".",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 6,
+          "source_pages": [
+            "week2_sample_slides:4",
+            "week2_sample_slides:4",
+            "week2_sample_slides:4",
+            "week2_sample_slides:2",
+            "week2_sample_slides:2",
+            "week2_sample_slides:2"
+          ],
+          "have_image": true,
+          "latency_ms": 2490.4,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4,
+            "reranked": true
+          },
+          "correct": true,
+          "method": "grounded+phrase+image",
+          "phrase_hit": true
+        },
+        {
+          "id": "u1",
+          "type": "unanswerable",
+          "question": "What is the exact instructor office-hours schedule and room number for this course?",
+          "rerank": true,
+          "answer": "The provided course materials do not establish the exact instructor office-hours schedule or room number.",
+          "grounded": false,
+          "supports_sources": true,
+          "num_sources": 6,
+          "source_pages": [
+            "syllabus_sample:1",
+            "week2_sample_slides:5",
+            "week2_sample_slides:2",
+            "week2_sample_slides:2",
+            "week2_sample_slides:7",
+            "week2_sample_slides:1"
+          ],
+          "have_image": true,
+          "latency_ms": 1648.6,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4,
+            "reranked": true
+          },
+          "correct": true,
+          "method": "acknowledged-missing"
+        }
+      ]
+    },
+    "rerank_False": {
+      "rerank": false,
+      "questions_run": 8,
+      "correct": 8,
+      "correct_rate": 1.0,
+      "avg_latency_ms": 1244.5,
+      "supported_sources_rate": 1.0,
+      "rows": [
+        {
+          "id": "t1",
+          "type": "text",
+          "question": "According to the Week 2 slides, what three parts make up hybrid retrieval?",
+          "rerank": false,
+          "answer": "According to the Week 2 slides, hybrid retrieval is made up of keyword, text embeddings, and visual embeddings.",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 3,
+          "source_pages": [
+            "week2_sample_slides:2",
+            "week2_sample_slides:2",
+            "week2_sample_slides:2"
+          ],
+          "have_image": true,
+          "latency_ms": 1252.1,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4
+          },
+          "correct": true,
+          "method": "grounded+phrase",
+          "phrase_hit": true
+        },
+        {
+          "id": "t2",
+          "type": "text",
+          "question": "What is the assistant's evidence policy when the materials do not support an answer?",
+          "rerank": false,
+          "answer": "If the materials do not establish an answer, the assistant must say so and never invent facts or citations.",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 3,
+          "source_pages": [
+            "week2_sample_slides:5",
+            "week2_sample_slides:5",
+            "week2_sample_slides:5"
+          ],
+          "have_image": true,
+          "latency_ms": 949.1,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4
+          },
+          "correct": true,
+          "method": "grounded+phrase",
+          "phrase_hit": true
+        },
+        {
+          "id": "t3",
+          "type": "text",
+          "question": "How are practice-quiz answer keys handled in this course assistant?",
+          "rerank": false,
+          "answer": "Practice-quiz answer keys are fixed and remain hidden until the student answers the question or explicitly requests the key. Additionally, the explanations provided for the answers point back to a specific slide or section of the course materials.",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 3,
+          "source_pages": [
+            "week2_sample_slides:6",
+            "week2_sample_slides:6",
+            "week2_sample_slides:6"
+          ],
+          "have_image": true,
+          "latency_ms": 1192.2,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4
+          },
+          "correct": true,
+          "method": "grounded+phrase",
+          "phrase_hit": true
+        },
+        {
+          "id": "t4",
+          "type": "text",
+          "question": "According to the syllabus, which part of the grade is worth 40 percent?",
+          "rerank": false,
+          "answer": "According to the syllabus, grounded answers are worth 40 percent of the grade.",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 1,
+          "source_pages": [
+            "syllabus_sample:1"
+          ],
+          "have_image": false,
+          "latency_ms": 1105.8,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4
+          },
+          "correct": true,
+          "method": "grounded+phrase",
+          "phrase_hit": true
+        },
+        {
+          "id": "t5",
+          "type": "text",
+          "question": "Does this course require a textbook?",
+          "rerank": false,
+          "answer": "No, the course does not require a textbook; all materials are provided on Canvas.",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 1,
+          "source_pages": [
+            "syllabus_sample:1"
+          ],
+          "have_image": false,
+          "latency_ms": 1179.9,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4
+          },
+          "correct": true,
+          "method": "grounded+phrase",
+          "phrase_hit": true
+        },
+        {
+          "id": "v1",
+          "type": "visual",
+          "question": "Find the slide with the Vibe Coding on Prod meme and describe what the image and text show.",
+          "rerank": false,
+          "answer": "The slide titled \"Vibe Coding on Prod (meme)\" features a meme format with two black bars. The top bar contains the text \"VIBE CODING on PROD\". The bottom bar is partially obscured by a large red circle and contains the text \"IN MY HEAD / OH NO\".",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 3,
+          "source_pages": [
+            "week2_sample_slides:3",
+            "week2_sample_slides:3",
+            "week2_sample_slides:3"
+          ],
+          "have_image": true,
+          "latency_ms": 1274.2,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4
+          },
+          "correct": true,
+          "method": "grounded+phrase+image",
+          "phrase_hit": true
+        },
+        {
+          "id": "v2",
+          "type": "visual",
+          "question": "Describe the hybrid RAG architecture diagram on the slides (what boxes and arrows connect).",
+          "rerank": false,
+          "answer": "The Hybrid RAG architecture diagram (visible in the first slide image) depicts a \"RAG pipeline diagram\" enclosed in a large blue box. Inside this box, there are three input boxes labeled \"PDFs\", \"Slides\", and \"Text\". Arrows connect these three input boxes to a single box labeled \"Retrieve\". The text on the slide further explains that the architecture uses \"Separate keyword, text-vector, and visual-vector indexes\" and that \"Candidates are merged (RRF) and reranked by a multimodal reranker.\"",
+          "grounded": true,
+          "supports_sources": true,
+          "num_sources": 7,
+          "source_pages": [
+            "week2_sample_slides:4",
+            "week2_sample_slides:4",
+            "week2_sample_slides:4",
+            "week2_sample_slides:2",
+            "week2_sample_slides:1",
+            "week2_sample_slides:2",
+            "week2_sample_slides:1"
+          ],
+          "have_image": true,
+          "latency_ms": 1681.2,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4
+          },
+          "correct": true,
+          "method": "grounded+phrase+image",
+          "phrase_hit": true
+        },
+        {
+          "id": "u1",
+          "type": "unanswerable",
+          "question": "What is the exact instructor office-hours schedule and room number for this course?",
+          "rerank": false,
+          "answer": "The provided course materials do not establish the exact instructor office-hours schedule or room number.",
+          "grounded": false,
+          "supports_sources": true,
+          "num_sources": 16,
+          "source_pages": [
+            "syllabus_sample:1",
+            "week2_sample_slides:3",
+            "week2_sample_slides:2",
+            "week2_sample_slides:1",
+            "week2_sample_slides:4",
+            "week2_sample_slides:6",
+            "week2_sample_slides:7",
+            "week2_sample_slides:1",
+            "week2_sample_slides:1",
+            "week2_sample_slides:6",
+            "week2_sample_slides:5",
+            "week2_sample_slides:5",
+            "week2_sample_slides:5",
+            "week2_sample_slides:6",
+            "week2_sample_slides:4",
+            "week2_sample_slides:2"
+          ],
+          "have_image": true,
+          "latency_ms": 1321.9,
+          "retrieval": {
+            "keyword_hits": 6,
+            "textvec_hits": 6,
+            "visual_hits": 4
+          },
+          "correct": true,
+          "method": "acknowledged-missing"
+        }
+      ]
+    }
+  },
+  "question_set": [
+    {
+      "id": "t1",
+      "type": "text",
+      "question": "According to the Week 2 slides, what three parts make up hybrid retrieval?",
+      "expected": [
+        "keyword",
+        "text embedding",
+        "visual embedding"
+      ]
+    },
+    {
+      "id": "t2",
+      "type": "text",
+      "question": "What is the assistant's evidence policy when the materials do not support an answer?",
+      "expected": [
+        "do not establish",
+        "never invent",
+        "say so"
+      ]
+    },
+    {
+      "id": "t3",
+      "type": "text",
+      "question": "How are practice-quiz answer keys handled in this course assistant?",
+      "expected": [
+        "hidden",
+        "until you answer",
+        "fixed"
+      ]
+    },
+    {
+      "id": "t4",
+      "type": "text",
+      "question": "According to the syllabus, which part of the grade is worth 40 percent?",
+      "expected": [
+        "grounded answer"
+      ]
+    },
+    {
+      "id": "t5",
+      "type": "text",
+      "question": "Does this course require a textbook?",
+      "expected": [
+        "does not require",
+        "not required",
+        "no textbook",
+        "provided on canvas"
+      ]
+    },
+    {
+      "id": "v1",
+      "type": "visual",
+      "question": "Find the slide with the Vibe Coding on Prod meme and describe what the image and text show.",
+      "expected": [
+        "vibe coding",
+        "prod"
+      ]
+    },
+    {
+      "id": "v2",
+      "type": "visual",
+      "question": "Describe the hybrid RAG architecture diagram on the slides (what boxes and arrows connect).",
+      "expected": [
+        "pdf",
+        "slides",
+        "retrieve",
+        "rerank",
+        "answer"
+      ]
+    },
+    {
+      "id": "u1",
+      "type": "unanswerable",
+      "question": "What is the exact instructor office-hours schedule and room number for this course?",
+      "expected": []
+    }
+  ]
+}

@@ -1,2 +1,10 @@
-# Bootstrap test dependency. Runtime dependencies are selected and pinned per implementation branch.
-pytest
+# Course Assistant runtime + test dependencies.
+# Verified working with these floors under Python 3.11 (uv-managed venv).
+pymupdf>=1.24          # PDF text + per-page rendering to PNG
+python-pptx>=1.0       # PPTX text/slide extraction
+python-docx>=1.1       # DOCX text extraction
+bm25s>=0.2             # keyword search index
+numpy>=1.26            # cosine vector stores
+requests>=2.31         # HTTP clients for class services
+gradio>=5              # web interface
+pytest>=8              # tests (also run in CI)

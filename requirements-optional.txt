@@ -1,5 +1,16 @@
-# Candidate implementation dependencies; pin and move selected packages into requirements.txt after comparison.
-bm25s
-chromadb
-gradio
-langchain-text-splitters
+# Optional runtime additions.
+#
+# Most course files (PDF, PPTX, DOCX, TXT, MD, and images) work without this
+# file. Two optional integrations need extra software that we deliberately do
+# NOT install by default:
+#
+# - LibreOffice (`soffice`) to auto-convert PPTX/DOCX -> PDF so those files get
+#   rendered page/slide *images* automatically. Without it, PPTX/DOCX are still
+#   searchable via their extracted text, but slide images require a manual
+#   "Save as PDF" export (documented in README). On macOS install the
+#   LibreOffice.app bundle; on Linux `apt install libreoffice`.
+#
+# - Optional heavier retrieval backends (e.g. chromadb) if a teammate replaces
+#   the default lightweight NumPy vector store. Not required for this branch.
+#
+# No pip packages are required beyond requirements.txt for the default path.
