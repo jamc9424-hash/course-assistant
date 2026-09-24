@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "course-assistant"
+version = "0.1.0"
+description = "Grounded, multimodal course assistant with hybrid RAG and practice quizzes."
+requires-python = ">=3.10"
+dependencies = [
+    "pymupdf>=1.24",
+    "python-pptx>=1.0",
+    "python-docx>=1.1",
+    "bm25s>=0.2",
+    "numpy>=1.26",
+    "requests>=2.31",
+    "gradio>=5",
+]
+
+[tool.setuptools.packages.find]
+include = ["course_assistant*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra"
