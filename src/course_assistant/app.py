@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 from .assistant import CourseAssistant
@@ -109,8 +110,10 @@ def build_app():
     with gr.Blocks(title="Course Assistant") as demo:
         gr.Markdown(
             "# Course Assistant\n"
-            "Upload PDF, PPTX, DOCX, TXT, or Markdown course files. Uploading the same content twice is skipped. "
-            "Remove a document at any time; its searchable text and generated page images are removed from this session."
+            "Upload PDF, PPTX, PPT, ODP, DOCX, TXT, or Markdown course files. "
+            "PPT/PPTX/ODP slide images are rendered automatically when LibreOffice is installed; "
+            "otherwise PPTX text and slide metadata remain available. Uploading the same content twice is skipped. "
+            "Remove a document at any time; its searchable text and generated images are removed from this session."
         )
         store_state = gr.State(MaterialStore())
         files = gr.File(file_count="multiple", type="filepath", label="Add course materials")
@@ -142,7 +145,17 @@ def build_app():
 
 
 def main() -> None:
-    build_app().launch()
+    launch_kwargs = {"server_name": os.getenv("GRADIO_SERVER_NAME", "0.0.0.0")}
+    port = os.getenv("PORT") or os.getenv("GRADIO_SERVER_PORT")
+    if port:
+        try:
+            server_port = int(port)
+        except ValueError as exc:
+            raise RuntimeError("PORT/GRADIO_SERVER_PORT must be an integer") from exc
+        if not 1 <= server_port <= 65535:
+            raise RuntimeError("PORT/GRADIO_SERVER_PORT must be between 1 and 65535")
+        launch_kwargs["server_port"] = server_port
+    build_app().launch(**launch_kwargs)
 
 
 if __name__ == "__main__":

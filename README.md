@@ -6,7 +6,7 @@ A Python course assistant that answers questions and generates practice quizzes 
 
 Build a grounded, multimodal course assistant that:
 
-- accepts course files such as PDF, PPTX, DOCX, and common text formats;
+- accepts course files such as PDF, PPTX, PPT, ODP, DOCX, and common text formats;
 - preserves extracted text, source locations, and original page/slide images;
 - answers questions with hybrid retrieval using keyword, text-embedding, and visual-embedding search;
 - acknowledges missing information instead of inventing answers or citations;
@@ -26,7 +26,7 @@ This repository is intentionally set up for parallel alternatives:
 
 Do not commit course files, API keys, endpoint credentials, generated indexes, or student data.
 
-## Planned architecture
+## Architecture
 
 ```text
 Canvas files
@@ -69,9 +69,13 @@ Copy `.env.example` to `.env` only for local use, then load it into the server e
 
 ## Supported input policy
 
-The upload manager accepts PDF, PPTX, DOCX, TXT, and Markdown. PDF files are rendered page-by-page into original page images. PPTX files are accepted directly for text and slide metadata; for reliable original slide-image evidence, export the deck to PDF before upload. Manual export is the supported workaround when LibreOffice is not installed. Optional LibreOffice/`soffice` automation can be added later, but is not required by the current implementation. Unsupported or malformed files receive a clear error without partial searchable content.
+The upload manager accepts PDF, PPTX, PPT, ODP, DOCX, TXT, and Markdown. PDF files are rendered page-by-page into original page images. PPTX files are parsed directly and, when LibreOffice/`soffice` is installed, converted to PDF so original slide images are preserved. Legacy PPT and ODP files require LibreOffice for conversion. Without LibreOffice, export slides to PDF before upload. Unsupported or malformed files receive a clear error without partial searchable content.
 
 In the app, upload files through **Add course materials**. The uploaded-material list shows each content ID. Enter that ID under **Remove document** to remove its chunks and generated artifacts from the active session. Identical file content is skipped on repeat upload.
+
+## Deployment
+
+The included `Dockerfile` and `render.yaml` support a Render deployment. The image installs LibreOffice Impress so uploaded presentations can be rendered as slide images. Supply `CLASS_SERVICE_API_KEY` through Render's secret environment settings; never put it in `render.yaml` or the image. The supplied class URLs are HTTP, so production deployments intentionally fall back to the local keyword baseline unless HTTPS service URLs and `CLASS_SERVICE_ALLOW_INSECURE_HTTP=true` are explicitly configured on a trusted network.
 
 ## Evidence policy
 
@@ -79,20 +83,11 @@ Every answer and quiz explanation must carry structured source records. A source
 
 ## Evaluation and status
 
-The project is currently in repository setup. Add benchmark materials only when permitted by the course. Each design comparison should record:
+The implemented baseline is tested locally and documented in `docs/evaluation.md`. Add benchmark materials only when permitted by the course. Each design comparison should record retrieval configuration, model/service versions, latency, failure behavior, grounded-answer and citation-support checks, quiz answer-key stability, visual evidence coverage, and known limitations. Live course-material benchmark results remain pending until permitted Canvas files are supplied.
 
-- retrieval configuration and model/service versions;
-- latency and failure behavior;
-- grounded-answer and citation-support checks;
-- quiz answer-key stability;
-- visual evidence coverage;
-- known limitations and unchecked cases.
+## Integrated implementation
 
-Screenshots and findings will be added to `docs/` as the interface becomes available.
-
-## JamesBranch implementation
-
-The first vertical slice is available on `JamesBranch`:
+The integrated app combines JamesBranch's verified material management, hybrid retrieval, visual evidence, structured answers, quiz controls, service fallbacks, security checks, and automated tests with EliasBranch's LibreOffice presentation rendering, upload-size guard, deployment packaging, and responsive port configuration.
 
 ```bash
 python -m venv .venv
@@ -110,8 +105,8 @@ PYTHONPATH=src python -m course_assistant.cli notes.txt --question "What does th
 
 The implementation provides:
 
-- PDF, PPTX, DOCX, TXT, and Markdown ingestion paths;
-- PDF page image preservation and source page/slide metadata;
+- PDF, PPTX, PPT, ODP, DOCX, TXT, and Markdown ingestion paths;
+- PDF page and optional LibreOffice-rendered presentation image preservation with source page/slide metadata;
 - separate keyword and visual indexes, optional text/visual embedding indexes, and reranking adapters;
 - structured answers with `answer` and `sources` fields;
 - missing-information responses when retrieval finds no supporting evidence;
@@ -121,7 +116,7 @@ The implementation provides:
 - Session-scoped upload and removal controls with SHA-256 content deduplication; removing a document rebuilds the searchable corpus and deletes generated artifacts.
 - Visual RAG returns retrieved slide images with document and page/slide captions. When the parser service is available, visual sources also receive a conservative description of visible pictures, memes, diagrams, and charts.
 
-The upload manager accepts PDF, PPTX, DOCX, TXT, and Markdown. Unsupported formats are rejected without entering the store, parser failures are reported without leaving partial artifacts, and re-uploading identical bytes is skipped even if the filename changes.
+The upload manager accepts PDF, PPTX, PPT, ODP, DOCX, TXT, and Markdown. Unsupported formats are rejected without entering the store, parser failures are reported without leaving partial artifacts, and re-uploading identical bytes is skipped even if the filename changes. Uploads are capped at 150 MB.
 
 The baseline runs without class credentials using keyword retrieval. When `CLASS_SERVICE_API_KEY` is present in the ignored local environment, the assistant uses the configured class text embedding, visual embedding, and reranking services. Document parsing is wired through the service client for future image-first ingestion.
 
@@ -151,7 +146,7 @@ Screenshots were captured from the running Gradio app using a synthetic, non-cou
 
 - The live class endpoints were connectivity-tested and their request contracts are documented in `docs/class-services.md`.
 - The current answer generator is extractive and conservative; it does not yet call a generative vision-capable LLM because a generation endpoint was not included in the supplied service map.
-- PPTX and DOCX preserve text/source locations, but PDF is currently the only parser that renders original page images automatically.
+- PPT/PPTX/ODP image rendering depends on LibreOffice; without it, PPTX text and source locations still work and manual PDF export is supported.
 - The quiz generator is a deterministic baseline for evaluating retrieval and evidence behavior, not a final pedagogical question writer.
 - Automated tests cover the dependency-light core, security configuration, source validation, answer-key stability, and service request construction. Live service calls are not run in CI.
 - Synthetic app screenshots are committed; course-material benchmark results remain pending because permitted Canvas files were not supplied.

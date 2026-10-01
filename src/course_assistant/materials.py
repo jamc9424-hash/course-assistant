@@ -9,7 +9,8 @@ from pathlib import Path
 from .ingest import ingest_file
 from .models import DocumentChunk
 
-_SUPPORTED_SUFFIXES = {".pdf", ".pptx", ".docx", ".txt", ".md", ".markdown"}
+_SUPPORTED_SUFFIXES = {".pdf", ".pptx", ".ppt", ".odp", ".docx", ".txt", ".md", ".markdown"}
+_MAX_FILE_BYTES = 150 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,8 @@ class MaterialStore:
             raise ValueError(f"unsupported file format: {suffix or '(none)'}")
         if not file_path.is_file():
             raise FileNotFoundError(file_path)
+        if file_path.stat().st_size > _MAX_FILE_BYTES:
+            raise ValueError("course material exceeds the 150 MB upload limit")
         content_hash = hashlib.sha256(file_path.read_bytes()).hexdigest()
         existing_id = self._hash_to_id.get(content_hash)
         if existing_id:

@@ -1,0 +1,10 @@
+# Keep local credentials, course files, generated artifacts, caches, and test outputs out of the image.
+.env
+.env.*
+!.env.example
+artifacts/
+data/
+.pytest_cache/
+__pycache__/
+.git/
+.gitignore
