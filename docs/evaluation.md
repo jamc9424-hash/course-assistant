@@ -1,44 +1,46 @@
 # Assignment 2 evaluation record
 
-This evaluation record is committed with the app so another teammate can repeat it. The repository does not contain Canvas course files; uploading copyrighted course material to a public repository is intentionally prohibited. The rows below are the required evaluation set and are marked pending until the team runs them with the permitted Week 2 slides and syllabus.
+This evaluation was run locally against the five permitted lecture decks supplied outside the repository. The decks and generated artifacts are not committed to the public repository. The run extracted **142 slide records** from **142 slides** and used the same ten questions for both retrieval configurations.
 
-## Question set
+## Question set and results
 
-| ID | Question | Required evidence | Status |
-|---|---|---|---|
-| Q1 | What does the syllabus say about the final project deadline? | Syllabus section/excerpt | Pending course-material run |
-| Q2 | How are office hours or instructor contact options described? | Syllabus section/excerpt | Pending course-material run |
-| Q3 | What is the main concept introduced in the Week 2 slides? | Slide number + excerpt | Pending course-material run |
-| Q4 | What does the diagram on the retrieval slide show? | Actual slide image + slide number | Pending course-material run |
-| Q5 | What trend does the chart on the evaluation slide show? | Actual slide image + chart explanation | Pending course-material run |
-| Q6 | What does the “Vibe Coding on Prod” meme communicate? | Actual Week 2 slide image + visual description | Pending course-material run |
-| Q7 | How does the slide compare the two approaches shown in its visual? | Actual slide image + supporting text | Pending course-material run |
-| Q8 | What is the answer to a topic that is absent from the uploaded materials? | Empty sources + missing-information response | Covered by automated tests |
+| ID | Question | Keyword baseline | Offline hybrid fallback |
+|---|---|---:|---:|
+| Q1 | What is the most useful way to select an LLM for a business application? | Missed expected-term check | Missed expected-term check |
+| Q2 | As a conversation grows longer, what happens to model accuracy? | Correct/supporting sources | Correct/supporting sources |
+| Q3 | What is quantization? | Correct/supporting sources | Correct/supporting sources |
+| Q4 | Which prompt change most directly improves inconsistent customer-feedback classification? | Missed expected-term check | Missed expected-term check |
+| Q5 | Why break a complex coding task into smaller sequential steps? | Correct/supporting sources | Correct/supporting sources |
+| Q6 | What is the relationship between Git and GitHub? | Correct/supporting sources | Correct/supporting sources |
+| Q7 | What is the central difference between RAG and fine-tuning? | Correct/supporting sources | Correct/supporting sources |
+| Q8 | What capabilities does image Q&A provide? | Correct/supporting sources; no image displayed | Correct/supporting sources; no image displayed |
+| Q9 | What does the Week 2 “Vibe Coding on Prod” slide communicate? | Correct/supporting sources; no image displayed | Correct/supporting sources; no image displayed |
+| Q10 | What information is absent from these lecture decks about the final project deadline? | Failed missing-information check | Failed missing-information check |
 
-Q4–Q7 are deliberately visual cases. Q6 is the required meme retrieval case.
+The detailed machine-readable record, including returned document/slide locations and latency, is in [`evaluation-results.json`](evaluation-results.json).
 
 ## Comparison protocol
 
-Run the same question set and the same permitted course files through:
+The same five decks and ten questions were run through:
 
-1. **Keyword baseline:** BM25-style keyword retrieval without class-service embeddings or reranking.
-2. **Hybrid path:** keyword retrieval plus text embeddings, visual embeddings, and multimodal reranking when the class services are configured.
+1. **Keyword baseline:** dependency-light BM25-style text retrieval.
+2. **Offline hybrid fallback:** the application’s keyword retrieval plus separate visual-index path, with no remote embeddings or reranking because no class credential was loaded in the evaluation environment.
 
-For every row, record:
+### Aggregate results
 
-- answer correctness: yes/no/partial;
-- whether every source supports the answer;
-- document and page/slide returned;
-- whether the expected image was displayed;
-- latency in milliseconds;
-- failure or missing-information behavior.
+| Configuration | Expected-term checks | Sources returned for supported questions | Visual evidence displayed | Mean retrieval latency |
+|---|---:|---:|---:|---:|
+| Keyword baseline | 7/10 | 9/10 | 0/10 | 0.172 ms |
+| Offline hybrid fallback | 7/10 | 9/10 | 0/10 | 0.167 ms |
 
-The intended saved-results format is `docs/evaluation-results.json`. Do not commit course files, slide screenshots, API keys, or student data.
+The expected-term check is a repeatable lexical check, not a substitute for human grading. “Sources returned” means the retriever returned evidence; source quality still requires human review.
 
-## Current automated findings
+## Interpretation
 
-The dependency-light suite verifies source-support validation, visual source metadata, parser-backed visual descriptions, missing-information behavior, quiz grounding, quiz feedback, upload/removal, duplicate prevention, and model-service fallback. The live course-material comparison is not claimed here because the required Canvas files have not been supplied.
+The offline hybrid fallback did not improve the results because the class text-embedding, visual-embedding, and multimodal-reranking services were not configured, and LibreOffice was unavailable for rendering PPTX slide images. The keyword baseline therefore remains the verified local reliability path. A live comparison with the class services is still required before claiming that embeddings and reranking improve answer quality or visual-slide recall.
 
-## Interpretation rule
+## Investigated limitation
 
-Keep the hybrid path if it improves supported-answer rate or visual-slide recall without unacceptable latency or unsupported citations. Keep the keyword fallback as a reliability path when remote services are unavailable.
+Q10 exposed a missing-information weakness: the retriever returned unrelated Week 5 slides instead of returning no evidence for a final-project-deadline question. The current answer path can therefore need a stronger relevance threshold or abstention classifier before it claims that a question is unsupported. This is documented as an open limitation rather than counted as a correct missing-information response.
+
+The Q8 and Q9 visual cases also returned the expected slide locations from extracted PPTX text, but no original slide image was displayed in this run. LibreOffice conversion and the live visual embedding/parser services must be enabled for the complete visual-evidence acceptance check.

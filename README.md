@@ -26,7 +26,7 @@ This repository is intentionally set up for parallel alternatives:
 
 Do not commit course files, API keys, endpoint credentials, generated indexes, or student data.
 
-## Architecture
+## Architecture at a glance
 
 ```text
 Canvas files
@@ -40,7 +40,7 @@ Canvas files
                                 |
                  schema validation + source-support checks
                                 |
-                         Python interface (planned Gradio)
+                                                  Python Gradio interface
 ```
 
 The class service map is documented in [`docs/class-services.md`](docs/class-services.md). The four supplied services use ports 9002–9005; endpoint adapters must follow the model cards and vLLM 0.29.0 conventions. Credentials are intentionally not stored here and must be supplied through server-side environment variables or an ignored local configuration file.
@@ -65,13 +65,22 @@ Launch the interface with:
 python -m course_assistant.app
 ```
 
-Copy `.env.example` to `.env` only for local use, then load it into the server environment before launch. The real class API key must never be placed in source, browser code, logs, screenshots, documentation, test results, or GitHub. The supplied class endpoints use HTTP; set `CLASS_SERVICE_ALLOW_INSECURE_HTTP=true` only on the trusted class network. Use HTTPS for production whenever available.
+Copy `.env.example` to `.env`, replace only the dummy API key locally, and load the variables into the server process before launch. On macOS/Linux/Git Bash use `set -a; source .env; set +a`. In PowerShell, use `Get-Content .env | Where-Object { $_ -and -not $_.StartsWith('#') } | ForEach-Object { $name,$value = $_ -split '=',2; Set-Item -Path "Env:$name" -Value $value }`. On Render, add the variables under the service's Environment settings and mark `CLASS_SERVICE_API_KEY` as a secret; do not place the value in `render.yaml`. Endpoint names, models, and request formats are listed in [`docs/class-services.md`](docs/class-services.md). The real class API key must never be placed in source, browser code, logs, screenshots, documentation, test results, or GitHub. The supplied class endpoints use HTTP; set `CLASS_SERVICE_ALLOW_INSECURE_HTTP=true` only on the trusted class network. Use HTTPS for production whenever available.
 
 ## Supported input policy
 
 The upload manager accepts PDF, PPTX, PPT, ODP, DOCX, TXT, and Markdown. PDF files are rendered page-by-page into original page images. PPTX files are parsed directly and, when LibreOffice/`soffice` is installed, converted to PDF so original slide images are preserved. Legacy PPT and ODP files require LibreOffice for conversion. Without LibreOffice, export slides to PDF before upload. Unsupported or malformed files receive a clear error without partial searchable content.
 
 In the app, upload files through **Add course materials**. The uploaded-material list shows each content ID. Enter that ID under **Remove document** to remove its chunks and generated artifacts from the active session. Identical file content is skipped on repeat upload.
+
+## Use the app
+
+1. Launch with `python -m course_assistant.app` and open the local Gradio URL shown in the terminal, normally `http://127.0.0.1:7860`.
+2. In **Add course materials**, upload one or more supported files. The interface reports duplicate uploads and displays each document ID.
+3. To remove a document, copy its ID into **Document ID to remove** and select **Remove document**. The document's chunks and generated images are deleted from the active session.
+4. In **Ask**, optionally enter a material filename and topic filter, enter a question, and select **Answer**. Review the separate `answer` and `sources` fields, excerpts, document/page or slide locations, and retrieved slide images.
+5. In **Practice quiz**, choose a question count and optional filters, select **Generate quiz**, and keep the returned answer key private. Submit a JSON answer map such as `{"q1": 0}` or request one question's solution; feedback includes the score, explanation, and supporting sources.
+6. Rerun the automated checks with `pytest`, or separately with `pytest -m "not e2e" -q` and `pytest -m e2e -q`.
 
 ## Deployment
 
@@ -83,7 +92,7 @@ Every answer and quiz explanation must carry structured source records. A source
 
 ## Evaluation and status
 
-The implemented baseline is tested locally and documented in `docs/evaluation.md`. Add benchmark materials only when permitted by the course. Each design comparison should record retrieval configuration, model/service versions, latency, failure behavior, grounded-answer and citation-support checks, quiz answer-key stability, visual evidence coverage, and known limitations. Live course-material benchmark results remain pending until permitted Canvas files are supplied.
+The implemented baseline is tested locally and documented in `docs/evaluation.md`. The supplied decks were evaluated with ten repeatable questions using the keyword baseline and offline hybrid fallback; aggregate results and returned slide locations are in `docs/evaluation-results.json`. A live comparison with class embeddings/reranking remains pending until credentials and LibreOffice are available.
 
 ## Integrated implementation
 
@@ -93,6 +102,7 @@ The integrated app combines JamesBranch's verified material management, hybrid r
 python -m venv .venv
 # Windows: .venv\\Scripts\\activate
 pip install -r requirements.txt
+pip install -e .
 pip install -r requirements-optional.txt  # file parsing and Gradio UI
 python -m course_assistant.app
 ```
@@ -120,7 +130,7 @@ The upload manager accepts PDF, PPTX, PPT, ODP, DOCX, TXT, and Markdown. Unsuppo
 
 The baseline runs without class credentials using keyword retrieval. When `CLASS_SERVICE_API_KEY` is present in the ignored local environment, the assistant uses the configured class text embedding, visual embedding, and reranking services. Document parsing is wired through the service client for future image-first ingestion.
 
-## Architecture
+## Architecture diagram
 
 ![Hybrid multimodal RAG architecture](docs/architecture.svg)
 
@@ -128,7 +138,7 @@ The SVG matches the implemented flow: upload and deduplicate material, parse tex
 
 ## Evaluation report
 
-The assignment question set, comparison protocol, saved results, and explicit course-material limitations are in [`docs/evaluation.md`](docs/evaluation.md) and [`docs/evaluation-results.json`](docs/evaluation-results.json). The required “Vibe Coding on Prod” meme case is included as Q6. It remains pending until the permitted Week 2 slides are provided; no fabricated course result is reported. The manual and automated verification checklist is in [`docs/manual-verification.md`](docs/manual-verification.md).
+The assignment question set, comparison protocol, saved results, and investigated limitations are in [`docs/evaluation.md`](docs/evaluation.md) and [`docs/evaluation-results.json`](docs/evaluation-results.json). The ten-question run includes two visual cases, including the required Week 2 “Vibe Coding on Prod” case. Its visual image checks remain pending because this local run lacked LibreOffice and class visual services. The manual and automated verification checklist is in [`docs/manual-verification.md`](docs/manual-verification.md).
 
 ## Screenshots
 

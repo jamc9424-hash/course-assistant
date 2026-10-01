@@ -1,18 +1,522 @@
 {
-  "course_materials": "not supplied in repository",
+  "materials": [
+    {
+      "filename": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+      "slides": 42
+    },
+    {
+      "filename": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+      "slides": 33
+    },
+    {
+      "filename": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+      "slides": 26
+    },
+    {
+      "filename": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+      "slides": 21
+    },
+    {
+      "filename": "MBAX 6418 - Week 6 - Multimodal Generative AI v1.pptx",
+      "slides": 20
+    }
+  ],
+  "question_count": 10,
   "questions": [
-    {"id": "Q1", "status": "pending-course-material-run"},
-    {"id": "Q2", "status": "pending-course-material-run"},
-    {"id": "Q3", "status": "pending-course-material-run"},
-    {"id": "Q4", "status": "pending-course-material-run"},
-    {"id": "Q5", "status": "pending-course-material-run"},
-    {"id": "Q6", "status": "pending-course-material-run", "visual_case": "Vibe Coding on Prod meme"},
-    {"id": "Q7", "status": "pending-course-material-run"},
-    {"id": "Q8", "status": "automated-missing-information-check"}
+    {
+      "id": "Q1",
+      "question": "What is the most useful way to select an LLM for a business application?",
+      "terms": [
+        "quality",
+        "context",
+        "speed",
+        "cost"
+      ],
+      "keyword_baseline": {
+        "correct_by_expected_term_check": false,
+        "sources_support_answer": true,
+        "latency_ms": 0.279,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 10"
+          },
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 12"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 4"
+          }
+        ],
+        "visual_evidence_displayed": false
+      },
+      "offline_hybrid_fallback": {
+        "correct_by_expected_term_check": false,
+        "sources_support_answer": true,
+        "latency_ms": 0.231,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 10"
+          },
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 12"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 4"
+          }
+        ],
+        "visual_evidence_displayed": false
+      }
+    },
+    {
+      "id": "Q2",
+      "question": "As a conversation grows longer, what happens to model accuracy?",
+      "terms": [
+        "accuracy",
+        "degrades"
+      ],
+      "keyword_baseline": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.212,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 13"
+          },
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 5"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 9"
+          }
+        ],
+        "visual_evidence_displayed": false
+      },
+      "offline_hybrid_fallback": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.199,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 13"
+          },
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 5"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 9"
+          }
+        ],
+        "visual_evidence_displayed": false
+      }
+    },
+    {
+      "id": "Q3",
+      "question": "What is quantization?",
+      "terms": [
+        "parameters",
+        "smaller",
+        "precision"
+      ],
+      "keyword_baseline": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.069,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 15"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 16"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 18"
+          }
+        ],
+        "visual_evidence_displayed": false
+      },
+      "offline_hybrid_fallback": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.067,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 15"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 16"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 18"
+          }
+        ],
+        "visual_evidence_displayed": false
+      }
+    },
+    {
+      "id": "Q4",
+      "question": "Which prompt change most directly improves inconsistent customer-feedback classification?",
+      "terms": [
+        "categories",
+        "examples",
+        "format"
+      ],
+      "keyword_baseline": {
+        "correct_by_expected_term_check": false,
+        "sources_support_answer": true,
+        "latency_ms": 0.186,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 12"
+          },
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 15"
+          },
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 24"
+          }
+        ],
+        "visual_evidence_displayed": false
+      },
+      "offline_hybrid_fallback": {
+        "correct_by_expected_term_check": false,
+        "sources_support_answer": true,
+        "latency_ms": 0.18,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 12"
+          },
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 15"
+          },
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 24"
+          }
+        ],
+        "visual_evidence_displayed": false
+      }
+    },
+    {
+      "id": "Q5",
+      "question": "Why break a complex coding task into smaller sequential steps?",
+      "terms": [
+        "missed",
+        "skipped",
+        "tracking"
+      ],
+      "keyword_baseline": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.203,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 24"
+          },
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 26"
+          },
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 11"
+          }
+        ],
+        "visual_evidence_displayed": false
+      },
+      "offline_hybrid_fallback": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.192,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 24"
+          },
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 26"
+          },
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 11"
+          }
+        ],
+        "visual_evidence_displayed": false
+      }
+    },
+    {
+      "id": "Q6",
+      "question": "What is the relationship between Git and GitHub?",
+      "terms": [
+        "Git",
+        "GitHub",
+        "version control"
+      ],
+      "keyword_baseline": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.106,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 21"
+          },
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 19"
+          },
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 20"
+          }
+        ],
+        "visual_evidence_displayed": false
+      },
+      "offline_hybrid_fallback": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.105,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 21"
+          },
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 19"
+          },
+          {
+            "document": "MBAX 6418 - Week 4 - Serving and Debugging v6.pptx",
+            "location": "slide 20"
+          }
+        ],
+        "visual_evidence_displayed": false
+      }
+    },
+    {
+      "id": "Q7",
+      "question": "What is the central difference between RAG and fine-tuning?",
+      "terms": [
+        "retrieved",
+        "context",
+        "training"
+      ],
+      "keyword_baseline": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.125,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 13"
+          },
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 2"
+          },
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 14"
+          }
+        ],
+        "visual_evidence_displayed": false
+      },
+      "offline_hybrid_fallback": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.121,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 13"
+          },
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 2"
+          },
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 14"
+          }
+        ],
+        "visual_evidence_displayed": false
+      }
+    },
+    {
+      "id": "Q8",
+      "question": "What capabilities does image Q&A provide?",
+      "terms": [
+        "images",
+        "charts",
+        "objects"
+      ],
+      "keyword_baseline": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.118,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 6 - Multimodal Generative AI v1.pptx",
+            "location": "slide 9"
+          },
+          {
+            "document": "MBAX 6418 - Week 6 - Multimodal Generative AI v1.pptx",
+            "location": "slide 6"
+          },
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 15"
+          }
+        ],
+        "visual_evidence_displayed": false
+      },
+      "offline_hybrid_fallback": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.114,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 6 - Multimodal Generative AI v1.pptx",
+            "location": "slide 9"
+          },
+          {
+            "document": "MBAX 6418 - Week 6 - Multimodal Generative AI v1.pptx",
+            "location": "slide 6"
+          },
+          {
+            "document": "MBAX 6418 - Week 3 - Prompt Engineering v1.pptx",
+            "location": "slide 15"
+          }
+        ],
+        "visual_evidence_displayed": false
+      }
+    },
+    {
+      "id": "Q9",
+      "question": "What does the Week 2 \u2018Vibe Coding on Prod\u2019 slide communicate?",
+      "terms": [
+        "vibe coding",
+        "prod",
+        "security"
+      ],
+      "keyword_baseline": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.203,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 33"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 2"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 30"
+          }
+        ],
+        "visual_evidence_displayed": false
+      },
+      "offline_hybrid_fallback": {
+        "correct_by_expected_term_check": true,
+        "sources_support_answer": true,
+        "latency_ms": 0.251,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 33"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 2"
+          },
+          {
+            "document": "MBAX 6418 - Week 2 - LLM Fundamentals v2.pptx",
+            "location": "slide 30"
+          }
+        ],
+        "visual_evidence_displayed": false
+      }
+    },
+    {
+      "id": "Q10",
+      "question": "What information is absent from these lecture decks about the final project deadline?",
+      "terms": [
+        "not found"
+      ],
+      "keyword_baseline": {
+        "correct_by_expected_term_check": false,
+        "sources_support_answer": false,
+        "latency_ms": 0.219,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 18"
+          },
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 8"
+          },
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 11"
+          }
+        ],
+        "visual_evidence_displayed": false
+      },
+      "offline_hybrid_fallback": {
+        "correct_by_expected_term_check": false,
+        "sources_support_answer": false,
+        "latency_ms": 0.209,
+        "returned_sources": [
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 18"
+          },
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 8"
+          },
+          {
+            "document": "MBAX 6418 - Week 5 - Context Engineering and RAG v1.pptx",
+            "location": "slide 11"
+          }
+        ],
+        "visual_evidence_displayed": false
+      }
+    }
   ],
   "comparison": {
-    "keyword_baseline": "not run without permitted Canvas files",
-    "hybrid_embeddings_reranking": "not run without permitted Canvas files",
-    "interpretation": "No course-quality conclusion is claimed until the same permitted files and questions are run through both paths."
+    "keyword_baseline": "BM25-style text retrieval only",
+    "offline_hybrid_fallback": "keyword retrieval with the separate visual index; class embeddings/reranking unavailable because no credential was loaded",
+    "interpretation": "The offline hybrid fallback did not add visual evidence because LibreOffice was unavailable and no class embedding/reranking credential was configured. The keyword path remains the verified reliability baseline. A live hybrid comparison is still required when the class services are available.",
+    "visual_limitation": "PPTX text was extracted, but no original slide images were rendered in this run; visual_evidence_displayed is therefore false.",
+    "method_note": "correct_by_expected_term_check is a reproducible lexical check, not a human grading substitute."
   }
 }
