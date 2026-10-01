@@ -14,6 +14,17 @@ def test_assistant_acknowledges_missing_information_without_sources():
     assert "could not find" in response.answer.casefold()
 
 
+def test_unanswerable_query_with_partial_keyword_overlap_abstains():
+    assistant = CourseAssistant.from_chunks(
+        [ingest_text("The final presentation uses a rubric and peer review.", "week5.txt")[0]]
+    )
+
+    response = assistant.ask("What is the final project deadline?")
+
+    assert response.sources == ()
+    assert "could not find" in response.answer.casefold()
+
+
 def test_assistant_topic_filter_limits_answer_evidence():
     chunks = [
         ingest_text("Decision trees split data using features.", "slides.txt", section="Trees")[0],

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Any
 
 from .models import AnswerResponse, DocumentChunk, SourceEvidence, validate_answer
 from .quiz import build_quiz
 from .services import ServiceReranker, image_path_to_data_url
-from .retrieval import HybridRetriever, KeywordIndex, build_service_retriever
+from .retrieval import HybridRetriever, KeywordIndex, _tokens, build_service_retriever
 
 
 @dataclass
@@ -74,6 +73,11 @@ class CourseAssistant:
             scoped = CourseAssistant.from_chunks(allowed)
             results = scoped.retriever.search(question, top_k=3)
         if not results:
+            return AnswerResponse("I could not find that information in the selected course materials.", ())
+        query_terms = set(_tokens(question))
+        evidence_terms = set(_tokens(" ".join(item.chunk.text for item in results)))
+        required_overlap = 1 if len(query_terms) <= 2 or any(item.chunk.source.image_path for item in results) else 2
+        if len(query_terms & evidence_terms) < required_overlap:
             return AnswerResponse("I could not find that information in the selected course materials.", ())
         sources = []
         visual_explanations = []
