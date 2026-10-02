@@ -35,6 +35,9 @@ def test_quiz_public_output_hides_solution_until_answered():
 
     assert "correct_choice" not in public
     assert "explanation" not in public
+    assert public["source"]["document"] == quiz.questions[0].source.document
+    assert public["source"]["page_or_slide"] == quiz.questions[0].source.page_or_slide
+    assert public["source"]["excerpt"] == ""
     assert score_quiz(quiz, {}) == {"score": 0, "total": 2, "answered": 0}
 
 
@@ -51,6 +54,7 @@ def test_feedback_reveals_only_answered_questions_and_matches_key():
     assert item["correct_choice"] == question.correct_choice
     assert item["explanation"]
     assert item["source"]["document"] == question.source.document
+    assert item["source"]["excerpt"] == question.source.excerpt
 
 
 def test_requested_solution_has_useful_explanation_and_source():

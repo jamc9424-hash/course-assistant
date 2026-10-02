@@ -41,6 +41,6 @@ The offline hybrid fallback did not improve the results because the class text-e
 
 ## Investigated limitation
 
-Q10 exposed a missing-information weakness: the retriever returned unrelated Week 5 slides instead of returning no evidence for a final-project-deadline question. The current answer path can therefore need a stronger relevance threshold or abstention classifier before it claims that a question is unsupported. This is documented as an open limitation rather than counted as a correct missing-information response.
+Q10 exposed a missing-information weakness in the original evaluation run: the retriever returned unrelated Week 5 slides instead of returning no evidence for a final-project-deadline question. After that run, the answer path was hardened with a relevance-overlap abstention check and a regression test (`test_unanswerable_query_with_partial_keyword_overlap_abstains`). The saved JSON remains the original run record; rerun the permitted-deck benchmark to replace its historical Q10 result.
 
 The Q8 and Q9 visual cases also returned the expected slide locations from extracted PPTX text, but no original slide image was displayed in this run. LibreOffice conversion and the live visual embedding/parser services must be enabled for the complete visual-evidence acceptance check.

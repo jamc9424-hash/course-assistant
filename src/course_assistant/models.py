@@ -58,11 +58,16 @@ class QuizQuestion:
     explanation: str | None = None
 
     def public_dict(self, reveal: bool = False) -> dict[str, Any]:
+        source = self.source.as_dict()
+        if not reveal:
+            # Preserve provenance while hiding the statement that may be the answer.
+            source["excerpt"] = ""
+            source["visual_description"] = None
         data = {
             "question_id": self.question_id,
             "prompt": self.prompt,
             "choices": list(self.choices),
-            "source": self.source.as_dict(),
+            "source": source,
         }
         if reveal:
             data["correct_choice"] = self.correct_choice
