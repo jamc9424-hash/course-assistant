@@ -26,6 +26,9 @@ This repository is intentionally set up for parallel alternatives:
 
 Do not commit course files, API keys, endpoint credentials, generated indexes, or student data.
 
+The final merged implementation is on `main`. PR #7 is merged and its CI checks passed. The repository retains historical branches for team work. The current public audit found no peer-review records for the earlier integration, issues 1–6 remain open, and `main` is not branch-protected; these are collaboration-process limitations, not claims of completed review.
+
+
 ## Architecture at a glance
 
 ```text
@@ -84,7 +87,7 @@ In the app, upload files through **Add course materials**. The uploaded-material
 
 ## Deployment
 
-The included `Dockerfile` and `render.yaml` support a Render deployment. The image installs LibreOffice Impress so uploaded presentations can be rendered as slide images. Supply `CLASS_SERVICE_API_KEY` through Render's secret environment settings; never put it in `render.yaml` or the image. The supplied class URLs are HTTP, so production deployments intentionally fall back to the local keyword baseline unless HTTPS service URLs and `CLASS_SERVICE_ALLOW_INSECURE_HTTP=true` are explicitly configured on a trusted network.
+The included `Dockerfile` and `render.yaml` support a Render deployment. The image installs LibreOffice Impress so uploaded presentations can be rendered as slide images. Supply `CLASS_SERVICE_API_KEY` through Render's secret environment settings; never put it in `render.yaml` or the image. Render supplies `PORT`; the app binds to `GRADIO_SERVER_NAME=0.0.0.0`. Configure the endpoint/model variables from `.env.example` when using non-default services. Use HTTPS service URLs in production; set `CLASS_SERVICE_ALLOW_INSECURE_HTTP=true` only for a trusted network using the supplied HTTP endpoints. This repository contains deployment packaging, not a completed hosted deployment; a public deployment URL must be recorded only after a real smoke test.
 
 ## Evidence policy
 
@@ -92,20 +95,14 @@ Every answer and quiz explanation must carry structured source records. A source
 
 ## Evaluation and status
 
-The implemented baseline is tested locally and documented in `docs/evaluation.md`. The supplied decks were evaluated with ten repeatable questions using the keyword baseline and offline hybrid fallback; aggregate results and returned slide locations are in `docs/evaluation-results.json`. A live comparison with class embeddings/reranking remains pending until credentials and LibreOffice are available.
+The current merged behavior hides quiz source excerpts until answer/reveal, abstains when a text-only query has insufficient evidence overlap, and defaults insecure HTTP access to disabled. These behaviors are covered by regression tests in the final branch.
+
+
+The implemented baseline is tested locally and documented in `docs/evaluation.md`. The supplied decks were evaluated with ten repeatable questions using the keyword baseline and offline hybrid fallback; aggregate results and returned slide locations are in `docs/evaluation-results.json`. That JSON is the original benchmark record and retains the historical pre-remediation Q10 failure; the current merged code includes the abstention fix and regression test, but the permitted-deck benchmark must be rerun before claiming post-fix quality results. A live comparison with class embeddings/reranking and original-slide visual recall remains pending until authorized course materials, credentials, and the optional rendering stack are available.
 
 ## Integrated implementation
 
 The integrated app combines JamesBranch's verified material management, hybrid retrieval, visual evidence, structured answers, quiz controls, service fallbacks, security checks, and automated tests with EliasBranch's LibreOffice presentation rendering, upload-size guard, deployment packaging, and responsive port configuration.
-
-```bash
-python -m venv .venv
-# Windows: .venv\\Scripts\\activate
-pip install -r requirements.txt
-pip install -e .
-pip install -r requirements-optional.txt  # file parsing and Gradio UI
-python -m course_assistant.app
-```
 
 For a dependency-light question-answering smoke test:
 

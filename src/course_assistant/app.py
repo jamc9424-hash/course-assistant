@@ -88,6 +88,8 @@ def _score(quiz: Quiz | None, answers_json: str, reveal_question_id: str) -> str
         return json.dumps({"error": "generate a quiz first"})
     try:
         answers = json.loads(answers_json or "{}")
+        if not isinstance(answers, dict):
+            raise ValueError("answers must be a JSON object of question_id to choice index")
         from .quiz import feedback_quiz
         return json.dumps(
             feedback_quiz(
