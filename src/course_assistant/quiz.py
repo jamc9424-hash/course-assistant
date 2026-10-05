@@ -7,8 +7,8 @@ from typing import Callable, Mapping, Any
 
 from .models import DocumentChunk, Quiz, QuizQuestion, reveal_question
 
-# Offline mode is an exact-source completion exercise, not a purported
-# conceptual MCQ with several other true course statements as choices.
+# Offline questions target an atomic subject–relation fact. Distractors come
+# from different subjects and never from a near-duplicate answer phrase.
 _SPLIT = re.compile(
     r"\b(is|are|was|were|uses|use|shows|show|includes|contains|lists|"
     r"splits|split|combines|connects|decreases|defines|supports|"
@@ -16,6 +16,16 @@ _SPLIT = re.compile(
     re.IGNORECASE,
 )
 _PLACEHOLDER = re.compile(r"^\[Visual (?:page|slide) with no extractable text\]$", re.I)
+
+
+def _content_words(text: str) -> set[str]:
+    return {word.casefold() for word in re.findall(r"[A-Za-z0-9]+", text)
+            if len(word) > 2 and word.casefold() not in {"the", "and", "for", "with", "using", "what", "which", "when", "where", "does", "did", "are", "how", "why"}}
+
+
+def _too_similar(left: str, right: str) -> bool:
+    a, b = _content_words(left), _content_words(right)
+    return bool(a and b and len(a & b) / len(a | b) >= 0.5)
 
 
 def _sentences(text: str) -> list[str]:
@@ -33,6 +43,48 @@ def _fact(sentence: str) -> tuple[str, str] | None:
     if len(prefix.split()) < 2 or len(completion.split()) < 2 or len(completion.split()) > 20:
         return None
     return prefix, completion
+
+
+def _question_prompt(prefix: str, completion: str) -> str | None:
+    match = _SPLIT.search(prefix)
+    if not match:
+        return None
+    subject = prefix[:match.start()].strip()
+    verb = match.group().casefold()
+    if not subject or len(subject.split()) > 9:
+        return None
+    if verb in {"is", "was", "are", "were"}:
+        temporal = bool(re.search(
+            r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|noon|midnight|today|tomorrow|\d{1,2}:\d{2}|am|pm)\b",
+            completion, re.I,
+        ))
+        if temporal:
+            return f"When {verb} {subject.casefold()}?"
+        return f"What {verb} {subject.casefold()}?"
+    base = {"uses": "use", "splits": "split", "shows": "show", "includes": "include",
+            "contains": "contain", "lists": "list", "combines": "combine", "connects": "connect",
+            "decreases": "decrease", "defines": "define", "supports": "support",
+            "identifies": "identify", "minimizes": "minimize", "estimates": "estimate",
+            "improves": "improve", "measures": "measure", "requires": "require",
+            "provides": "provide"}.get(verb, verb)
+    auxiliary = "do" if subject.casefold().split()[-1].endswith("s") else "does"
+    return f"What {auxiliary} {subject.casefold()} {base}?"
+
+
+def _study_item(prefix: str, completion: str) -> tuple[str, str] | None:
+    """Ask for one atomic relationship instead of an entire statement."""
+    match = _SPLIT.search(prefix)
+    if not match:
+        return None
+    verb = match.group().casefold()
+    if verb in {"split", "splits"}:
+        parts = re.split(r"\s+using\s+", completion, maxsplit=1, flags=re.I)
+        if len(parts) == 2 and all(len(part.split()) >= 1 for part in parts):
+            subject = re.sub(r"\brecursively\s*$", "", prefix[:match.start()], flags=re.I).strip()
+            auxiliary = "do" if subject.casefold().split()[-1].endswith("s") else "does"
+            return f"What {auxiliary} {subject.casefold()} use to split {parts[0].casefold()}?", parts[1]
+    prompt = _question_prompt(prefix, completion)
+    return (prompt, completion) if prompt else None
 
 
 def build_quiz(chunks: list[DocumentChunk], question_count: int = 5, seed: int = 0) -> Quiz:
@@ -53,11 +105,20 @@ def build_quiz(chunks: list[DocumentChunk], question_count: int = 5, seed: int =
         raise ValueError("selected materials need at least two distinct extractable statements for practice questions")
     rng.shuffle(candidates)
     questions: list[QuizQuestion] = []
-    for chunk, prefix, correct in candidates:
+    for chunk, prefix, completion in candidates:
+        item = _study_item(prefix, completion)
+        if not item:
+            continue
+        prompt, correct = item
+        if not prompt or _content_words(correct) & _content_words(prompt):
+            continue
         alternatives = list(dict.fromkeys(
-            ending for _, other_prefix, ending in candidates
-            if ending.casefold() != correct.casefold()
+            other_item[1] for _, other_prefix, ending in candidates
+            if (other_item := _study_item(other_prefix, ending))
+            and other_item[1].casefold() != correct.casefold()
             and other_prefix.casefold() != prefix.casefold()
+            and not _too_similar(correct, other_item[1])
+            and not _too_similar(prefix, other_prefix)
 
         ))[:3]
         if not alternatives:
@@ -66,7 +127,7 @@ def build_quiz(chunks: list[DocumentChunk], question_count: int = 5, seed: int =
         rng.shuffle(choices)
         questions.append(QuizQuestion(
             question_id=f"q{len(questions) + 1}",
-            prompt=f"Complete this exact course-material statement: “{prefix} ___”",
+            prompt=prompt,
             choices=tuple(choices),
             correct_choice=choices.index(correct),
             source=chunk.source,
@@ -111,7 +172,12 @@ def build_generated_quiz(
             continue
         if len(prompt) > 300 or len(correct) > 100 or len(explanation) > 500:
             continue
-        if (correct.casefold() not in chunk.text.casefold() or prompt.casefold() in seen
+        supporting_sentences = [sentence for sentence in _sentences(chunk.text)
+                                if correct.casefold() in sentence.casefold()]
+        subject_terms = _content_words(prompt) - _content_words(correct)
+        if (not supporting_sentences or not subject_terms
+                or not any(subject_terms & _content_words(sentence) for sentence in supporting_sentences)
+                or prompt.casefold() in seen
                 or correct.casefold() in prompt.casefold()):
             continue
         if len({choice.casefold().strip() for choice in [correct, *distractors]}) != 4:
@@ -121,8 +187,7 @@ def build_generated_quiz(
         seen.add(prompt.casefold())
         choices = [correct, *distractors]
         rng.shuffle(choices)
-        excerpt = next((sentence for sentence in _sentences(chunk.text)
-                        if correct.casefold() in sentence.casefold()), chunk.text)
+        excerpt = supporting_sentences[0]
         questions.append(QuizQuestion(
             question_id=f"q{len(questions) + 1}",
             prompt=prompt.strip(),

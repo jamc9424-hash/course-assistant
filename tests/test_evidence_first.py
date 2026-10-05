@@ -67,7 +67,7 @@ def test_model_answer_requires_valid_citation_to_evidence():
     assert "Tuesday" in response.answer
 
 
-def test_quiz_uses_exact_statement_completion_not_other_true_facts():
+def test_offline_quiz_asks_focused_relation_questions_not_other_true_statements():
     chunks = [
         *ingest_text("Decision trees split data using features. Gradient descent minimizes a loss function.", "notes.txt"),
         *ingest_text("The syllabus lists office hours on Tuesday. Cross validation estimates generalization error.", "week1.txt"),
@@ -75,8 +75,9 @@ def test_quiz_uses_exact_statement_completion_not_other_true_facts():
     quiz = build_quiz(chunks, question_count=2, seed=3)
     assert len(quiz.questions) == 2
     for question in quiz.questions:
-        assert "complete" in question.prompt.casefold()
-        assert "___" in question.prompt
+        assert question.prompt.endswith("?")
+        assert "___" not in question.prompt
+        assert question.choices[question.correct_choice].casefold() not in question.prompt.casefold()
         assert question.choices[question.correct_choice] in question.source.excerpt
         assert question.source.excerpt.count(".") <= 1
         assert question.prompt.casefold().count("which statement") == 0
@@ -126,6 +127,39 @@ def test_generated_quiz_rejects_prompt_that_contains_the_key():
             "distractors": ["random labels", "calendar dates", "student names"],
             "explanation": "Feature thresholds split records.",
         })
+
+
+def test_generated_quiz_rejects_answer_from_unrelated_sentence_in_same_chunk():
+    chunks = ingest_text("The exam uses a written rubric. Office hours are Tuesday at noon.", "notes.txt")
+    with pytest.raises(ValueError, match="verifiable"):
+        build_generated_quiz(chunks, lambda text, image_path=None: {
+            "prompt": "When is the exam?", "correct": "Tuesday",
+            "distractors": ["Monday", "Wednesday", "Friday"],
+            "explanation": "Office hours are Tuesday, but that is not the exam.",
+        })
+
+
+def test_offline_quiz_rejects_near_duplicate_true_completions():
+    chunks = [*ingest_text("Decision trees use feature thresholds to split the records.", "one.txt"),
+              *ingest_text("A decision tree uses feature thresholds to split the data.", "two.txt")]
+    with pytest.raises(ValueError, match="distinct|enough"):
+        build_quiz(chunks, question_count=1)
+
+
+def test_offline_question_asks_for_specific_relationship_not_statement_completion():
+    chunks = [
+        *ingest_text("Decision trees recursively split records using feature thresholds.", "notes.txt"),
+        *ingest_text("Cross validation estimates generalization error.", "notes2.txt"),
+        *ingest_text("Office hours are Tuesday at noon.", "syllabus.txt"),
+    ]
+    quiz = build_quiz(chunks, question_count=3, seed=1)
+    tree = next(question for question in quiz.questions if "decision trees" in question.prompt)
+    assert tree.prompt == "What do decision trees use to split records?"
+    assert tree.choices[tree.correct_choice] == "feature thresholds"
+    assert "feature thresholds" not in tree.prompt
+    assert tree.source.excerpt == "Decision trees recursively split records using feature thresholds."
+    assert any("cross validation" in question.prompt for question in quiz.questions)
+    assert any("When are office hours?" == question.prompt for question in quiz.questions)
 
 
 def test_generated_quiz_rejects_distractor_found_elsewhere_in_materials():
@@ -186,6 +220,19 @@ def test_model_cannot_add_unsupported_nonnumeric_claim():
     chunks = ingest_text("Office hours are Tuesday at noon.", "notes.txt")
     answer = CourseAssistant.from_chunks(chunks, Fake()).ask("When are office hours?")
     assert "mandatory" not in answer.answer
+
+
+def test_model_cannot_assign_quiz_percentage_to_exam():
+    class Fake:
+        def embed_text(self, texts):
+            raise RuntimeError("offline")
+
+        def generate_answer(self, question, evidence):
+            return "The exam is worth 30 percent [1]."
+
+    chunk = ingest_text("The exam is worth 20 percent. The quiz is worth 30 percent.", "syllabus.txt")
+    answer = CourseAssistant.from_chunks(chunk, Fake()).ask("How much is the exam worth?")
+    assert "exam is worth 30" not in answer.answer
 
 
 def test_model_cannot_reorder_words_into_contradictory_cited_claim():
