@@ -149,11 +149,33 @@ These **historical** screenshots were captured from commit `4587e42` using a syn
 
 ![Course Assistant quiz feedback with source](docs/screenshots/quiz-feedback.png)
 
+### Visual evidence examples from Week 2
+
+The following permitted course-material screenshots are three representative targets for visual retrieval. They cover a quantitative trend, a meme, and a before-and-after security example. The assistant should return the original image together with the deck name and slide number when a matching question is asked.
+
+#### Vibe Coding search trend · slide 29
+
+The chart compares Google search interest for “Vibe Coding” and “Learn to Code” following Andrej Karpathy's February 2025 post.
+
+![Week 2 slide 29 showing the Vibe Coding search trend](docs/screenshots/week2-slide-29-vibe-coding-trend.png)
+
+#### Vibe Coding on production systems · slide 33
+
+The meme warns that casually generated code should not be treated as a production-grade enterprise application without engineering review.
+
+![Week 2 slide 33 Vibe Coding on Prod meme](docs/screenshots/week2-slide-33-vibe-coding-prod.png)
+
+#### Security consequences · slide 34
+
+The paired posts contrast the launch of a no-handwritten-code SaaS with later reports of API-key abuse, subscription bypasses, and unauthorized database activity.
+
+![Week 2 slide 34 before-and-after security example](docs/screenshots/week2-slide-34-security-consequences.png)
+
 ## Current findings and limitations
 
 - The integrated answer path can now use the class vision-capable Qwen3.6 service for grounded text-and-image synthesis, while retaining a tested local fallback when the service is unavailable.
 - The retrieval stack is ready for stronger semantic and multimodal recall through Nemotron text embeddings, Qwen3-VL embeddings, and Qwen3-VL reranking; the dependency-light keyword path remains available for offline use.
-- PPT/PPTX/ODP image rendering depends on LibreOffice; without it, PPTX text and source locations still work and manual PDF export is supported.
+- LibreOffice remains the preferred path for complete PPT/PPTX/ODP slide rendering. When it is unavailable, PPTX ingestion preserves the largest original embedded picture on each slide so memes, screenshots, charts, and other raster evidence remain available for retrieval. Shape-only diagrams still require full rendering or PDF export.
 - The quiz generator is a deterministic baseline for evaluating retrieval and evidence behavior, with stable keys and source-backed feedback; a richer pedagogical writer can be added without changing the evidence contract.
 - Automated tests cover the dependency-light core, security configuration, source validation, answer-key stability, and service request construction. Live service calls are not run in CI.
 

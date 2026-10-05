@@ -161,6 +161,32 @@ def _render_presentation_images(pdf_path: Path, output_dir: Path) -> list[Path]:
     return images
 
 
+def _extract_slide_picture(slide, output_dir: Path, slide_index: int) -> Path | None:
+    """Preserve the largest original picture when full-slide rendering is unavailable.
+
+    This keeps memes, screenshots, charts, and other raster evidence searchable on
+    systems without LibreOffice. It intentionally does not attempt to recreate
+    PowerPoint shapes or layouts; a rendered full-slide image remains preferred.
+    """
+    try:
+        from pptx.enum.shapes import MSO_SHAPE_TYPE  # type: ignore
+    except ImportError:
+        return None
+
+    pictures = [shape for shape in slide.shapes if shape.shape_type == MSO_SHAPE_TYPE.PICTURE]
+    if not pictures:
+        return None
+    picture = max(pictures, key=lambda shape: int(shape.width) * int(shape.height))
+    image = picture.image
+    extension = (image.ext or "png").casefold()
+    if extension not in {"png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff"}:
+        return None
+    output_dir.mkdir(parents=True, exist_ok=True)
+    image_path = output_dir / f"slide-{slide_index}-embedded.{extension}"
+    image_path.write_bytes(image.blob)
+    return image_path
+
+
 def _ingest_presentation(path: Path, artifact_dir: Path) -> list[DocumentChunk]:
     if path.suffix.casefold() != ".pptx":
         converted = _convert_presentation(path, artifact_dir)
@@ -178,12 +204,17 @@ def _ingest_presentation(path: Path, artifact_dir: Path) -> list[DocumentChunk]:
         raise RuntimeError("PPTX support requires python-pptx; install the optional dependencies") from exc
     presentation = Presentation(path)
     converted = _convert_presentation(path, artifact_dir)
-    rendered = _render_presentation_images(converted, artifact_dir / "slides") if converted else []
+    slide_dir = artifact_dir / "slides"
+    rendered = _render_presentation_images(converted, slide_dir) if converted else []
     chunks: list[DocumentChunk] = []
     for slide_index, slide in enumerate(presentation.slides, start=1):
         text = " ".join(shape.text for shape in slide.shapes if hasattr(shape, "text")).strip()
         text = text or "[Visual slide with no extractable text]"
-        image_path = str(rendered[slide_index - 1]) if slide_index <= len(rendered) else None
+        if slide_index <= len(rendered):
+            image_path = str(rendered[slide_index - 1])
+        else:
+            embedded = _extract_slide_picture(slide, slide_dir, slide_index)
+            image_path = str(embedded) if embedded else None
         chunks.extend(ingest_text(text, path.name, page_or_slide=f"slide {slide_index}", image_path=image_path))
     return chunks
 
