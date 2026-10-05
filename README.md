@@ -156,7 +156,6 @@ These screenshots were refreshed from the merged `main` application at commit `0
 - PPT/PPTX/ODP image rendering depends on LibreOffice; without it, PPTX text and source locations still work and manual PDF export is supported.
 - The quiz generator is a deterministic baseline for evaluating retrieval and evidence behavior, with stable keys and source-backed feedback; a richer pedagogical writer can be added without changing the evidence contract.
 - Automated tests cover the dependency-light core, security configuration, source validation, answer-key stability, and service request construction. Live service calls are not run in CI.
-- Synthetic app screenshots are committed; course-material benchmark results remain pending because permitted Canvas files were not supplied.
 
 ## License
 
