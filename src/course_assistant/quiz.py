@@ -8,8 +8,42 @@ from typing import Mapping
 from .models import DocumentChunk, Quiz, QuizQuestion, reveal_question
 
 
+_FOCUS_STOPWORDS = {"a", "an", "the", "is", "are", "was", "were", "using", "with", "from", "this", "that", "and", "of", "to", "in"}
+
+
+def _focus_phrase(sentence: str) -> str:
+    words = [
+        word.casefold()
+        for word in re.findall(r"[A-Za-z0-9][A-Za-z0-9-]*", sentence)
+        if word.casefold() not in _FOCUS_STOPWORDS
+    ]
+    return " ".join(words[:5]) or "the selected material"
+
+
 def _sentences(text: str) -> list[str]:
     return [part.strip() for part in re.split(r"(?<=[.!?])\s+", text) if len(part.strip()) >= 20]
+
+
+def _question_prompt(statement: str) -> str:
+    """Turn an evidence sentence into a focused study question."""
+    words = statement.strip().rstrip(".").split()
+    subject_words: list[str] = []
+    for word in words:
+        cleaned = re.sub(r"[^A-Za-z0-9'-]", "", word)
+        if cleaned.casefold() in {
+            "is", "are", "was", "were", "uses", "use", "shows", "show", "includes", "contains", "lists",
+            "split", "splits", "combine", "combines", "connects", "connect", "decrease", "decreases",
+            "decreasing", "defines", "define", "supports", "support", "identifies", "identify", "remain",
+        }:
+            break
+        if cleaned:
+            subject_words.append(cleaned)
+        if len(subject_words) >= 6:
+            break
+    subject = " ".join(subject_words).strip()
+    if subject:
+        return f"What does the material say about {subject.casefold()}?"
+    return "Which statement is directly supported by the selected course material?"
 
 
 def build_quiz(chunks: list[DocumentChunk], question_count: int = 5, seed: int = 0) -> Quiz:
@@ -34,7 +68,7 @@ def build_quiz(chunks: list[DocumentChunk], question_count: int = 5, seed: int =
         questions.append(
             QuizQuestion(
                 question_id=f"q{index + 1}",
-                prompt="Which statement is supported by the selected course material?",
+                prompt=_question_prompt(correct),
                 choices=tuple(choices),
                 correct_choice=choices.index(correct),
                 source=chunk.source,

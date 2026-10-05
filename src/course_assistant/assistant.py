@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import re
 
 from .models import AnswerResponse, DocumentChunk, SourceEvidence, validate_answer
 from .quiz import build_quiz
 from .services import ServiceReranker, image_path_to_data_url
-from .retrieval import HybridRetriever, KeywordIndex, _tokens, build_service_retriever
+from .retrieval import HybridRetriever, KeywordIndex, LocalEmbeddingIndex, _tokens, build_service_retriever
 
 
 @dataclass
@@ -23,10 +24,20 @@ class CourseAssistant:
                 retriever = build_service_retriever(list(chunks), service_client)
                 retriever.reranker = ServiceReranker(service_client)
             except RuntimeError:
-                retriever = HybridRetriever(KeywordIndex(text_chunks), KeywordIndex(visual_chunks))
+                retriever = HybridRetriever(
+                    KeywordIndex(text_chunks),
+                    KeywordIndex(visual_chunks),
+                    LocalEmbeddingIndex.from_chunks(text_chunks) if text_chunks else None,
+                    LocalEmbeddingIndex.from_chunks(visual_chunks) if visual_chunks else None,
+                )
                 service_client = None
         else:
-            retriever = HybridRetriever(KeywordIndex(text_chunks), KeywordIndex(visual_chunks))
+            retriever = HybridRetriever(
+                KeywordIndex(text_chunks),
+                KeywordIndex(visual_chunks),
+                LocalEmbeddingIndex.from_chunks(text_chunks) if text_chunks else None,
+                LocalEmbeddingIndex.from_chunks(visual_chunks) if visual_chunks else None,
+            )
         return cls(chunks=list(chunks), retriever=retriever, service_client=service_client)
 
     def _filtered_chunks(self, material: str | None, topic: str | None) -> list[DocumentChunk]:
@@ -78,9 +89,34 @@ class CourseAssistant:
         ]
         try:
             answer = generator(question, evidence)
-            return answer or None
+            if not answer:
+                return None
+            answer_terms = set(_tokens(answer))
+            evidence_terms = set(_tokens(" ".join(source.excerpt for source in sources)))
+            return answer if answer_terms & evidence_terms else None
         except (OSError, RuntimeError, KeyError, IndexError, TypeError):
             return None
+
+    def _local_grounded_answer(self, question: str, sources: list[SourceEvidence], visual_explanations: list[str]) -> str:
+        query_terms = set(_tokens(question))
+        ranked: list[tuple[int, str]] = []
+        for source in sources:
+            for sentence in re.split(r"(?<=[.!?])\s+", source.excerpt):
+                sentence = sentence.strip()
+                if sentence:
+                    ranked.append((len(query_terms & set(_tokens(sentence))), sentence))
+        ranked.sort(key=lambda item: item[0], reverse=True)
+        selected: list[str] = []
+        for overlap, sentence in ranked:
+            if overlap or not selected:
+                if sentence not in selected:
+                    selected.append(sentence)
+            if len(selected) >= 2:
+                break
+        answer = "The selected course materials support this answer: " + " ".join(selected)
+        if visual_explanations:
+            answer += "\n\nVisual evidence: " + " ".join(visual_explanations[:1])
+        return answer
 
     def ask(self, question: str, material: str | None = None, topic: str | None = None) -> AnswerResponse:
         allowed = self._filtered_chunks(material, topic)
@@ -100,6 +136,11 @@ class CourseAssistant:
         required_overlap = 1 if len(query_terms) <= 2 or any(item.chunk.source.image_path for item in results) else 2
         if len(query_terms & evidence_terms) < required_overlap:
             return AnswerResponse("I could not find that information in the selected course materials.", ())
+        matching_results = [
+            item for item in results
+            if query_terms & set(_tokens(item.chunk.text))
+        ]
+        results = (matching_results or results[:1])[:2]
         sources = []
         visual_explanations = []
         for item in results:
@@ -111,9 +152,7 @@ class CourseAssistant:
             sources.append(source)
         answer = self._generate_grounded_answer(question, sources)
         if answer is None:
-            answer = "Based on the selected course materials: " + " ".join(source.excerpt for source in sources)
-            if visual_explanations:
-                answer += " Visual evidence explanation: " + " ".join(visual_explanations)
+            answer = self._local_grounded_answer(question, sources, visual_explanations)
         evidence = {}
         for chunk in allowed:
             evidence[chunk.source.document] = evidence.get(chunk.source.document, "") + " " + chunk.text

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import math
 import mimetypes
 import re
@@ -95,6 +96,27 @@ class VectorIndex:
         return sorted(ranked, key=lambda item: item.score, reverse=True)[:top_k]
 
 
+class LocalEmbeddingIndex(VectorIndex):
+    """Dependency-free semantic fallback using deterministic token/ngram vectors."""
+
+    DIMENSIONS = 256
+
+    @classmethod
+    def embed(cls, text: str) -> list[float]:
+        vector = [0.0] * cls.DIMENSIONS
+        tokens = _tokens(text)
+        features = tokens + [f"{left}_{right}" for left, right in zip(tokens, tokens[1:])]
+        for feature in features:
+            digest = hashlib.sha256(feature.encode("utf-8")).digest()
+            index = int.from_bytes(digest[:4], "big") % cls.DIMENSIONS
+            vector[index] += 1.0
+        return vector
+
+    @classmethod
+    def from_chunks(cls, chunks: list[DocumentChunk]) -> "LocalEmbeddingIndex":
+        return cls(chunks, [cls.embed(chunk.text) for chunk in chunks])
+
+
 @dataclass
 class HybridRetriever:
     text_index: KeywordIndex
@@ -105,31 +127,51 @@ class HybridRetriever:
     reranker: Reranker | None = None
 
     def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
-        candidates: dict[str, RetrievedChunk] = {}
-        for item in self.text_index.search(query, top_k * 2):
-            candidates[item.chunk.chunk_id] = item
-        for item in self.visual_index.search(query, top_k * 2):
-            previous = candidates.get(item.chunk.chunk_id)
-            if previous is None or item.score > previous.score:
-                candidates[item.chunk.chunk_id] = item
-        if self.embedding_client and self.text_vector_index:
-            query_vector = self.embedding_client.embed_text([f"query: {query}"])[0]
-            for item in self.text_vector_index.search(query_vector, top_k * 2):
-                previous = candidates.get(item.chunk.chunk_id)
-                if previous is None or item.score > previous.score:
-                    candidates[item.chunk.chunk_id] = item
+        """Recall from separate channels, fuse ranks, then rerank the candidates."""
+        channel_results: list[list[RetrievedChunk]] = [
+            self.text_index.search(query, top_k * 3),
+            self.visual_index.search(query, top_k * 3),
+        ]
+        if self.text_vector_index:
+            if self.embedding_client:
+                query_vector = self.embedding_client.embed_text([f"query: {query}"])[0]
+            else:
+                query_vector = LocalEmbeddingIndex.embed(query)
+            channel_results.append(self.text_vector_index.search(query_vector, top_k * 3))
             if self.visual_vector_index:
-                visual_query_vector = self.embedding_client.embed_visual([{"text": query}])[0]
-                for item in self.visual_vector_index.search(visual_query_vector, top_k * 2):
-                    previous = candidates.get(item.chunk.chunk_id)
-                    if previous is None or item.score > previous.score:
-                        candidates[item.chunk.chunk_id] = item
-        merged = list(candidates.values())
+                if self.embedding_client:
+                    visual_query_vector = self.embedding_client.embed_visual([{"text": query}])[0]
+                else:
+                    visual_query_vector = LocalEmbeddingIndex.embed(query)
+                channel_results.append(self.visual_vector_index.search(visual_query_vector, top_k * 3))
+
+        fused: dict[str, tuple[DocumentChunk, float, list[str]]] = {}
+        for results in channel_results:
+            for rank, item in enumerate(results, start=1):
+                previous = fused.get(item.chunk.chunk_id)
+                contribution = 1.0 / (60.0 + rank)
+                if previous is None:
+                    fused[item.chunk.chunk_id] = (item.chunk, contribution, [item.channel])
+                else:
+                    chunk, score, channels = previous
+                    fused[item.chunk.chunk_id] = (
+                        chunk,
+                        score + contribution,
+                        channels + ([item.channel] if item.channel not in channels else []),
+                    )
+        merged = [
+            RetrievedChunk(chunk, score, "+".join(channels))
+            for chunk, score, channels in fused.values()
+        ]
         if self.reranker:
-            merged.sort(key=lambda item: self.reranker.score(query, item.chunk), reverse=True)
-        else:
-            merged.sort(key=lambda item: item.score, reverse=True)
-        return merged[:top_k]
+            reranked = [(self.reranker.score(query, item.chunk), item) for item in merged]
+            reranked.sort(key=lambda pair: (pair[0], pair[1].score), reverse=True)
+            return [item for _, item in reranked[:top_k]]
+        return sorted(
+            merged,
+            key=lambda item: (item.score, bool(item.chunk.source.image_path)),
+            reverse=True,
+        )[:top_k]
 
 
 def build_service_retriever(chunks: list[DocumentChunk], client: object) -> HybridRetriever:

@@ -17,6 +17,23 @@ def _chunk_id(document_name: str, location: str | None, text: str) -> str:
     return hashlib.sha1(raw).hexdigest()[:16]
 
 
+def _split_text(text: str, max_chars: int = 900) -> list[str]:
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", text) if part.strip()]
+    if not sentences:
+        return []
+    chunks: list[str] = []
+    current = ""
+    for sentence in sentences:
+        if current and len(current) + 1 + len(sentence) > max_chars:
+            chunks.append(current)
+            current = sentence
+        else:
+            current = f"{current} {sentence}".strip()
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def ingest_text(
     text: str,
     document_name: str,
@@ -27,20 +44,21 @@ def ingest_text(
     cleaned = re.sub(r"\s+", " ", text).strip()
     if not cleaned:
         return []
-    source = SourceEvidence(
-        document=document_name,
-        page_or_slide=page_or_slide,
-        section=section,
-        excerpt=cleaned,
-        image_path=image_path,
-    )
+    chunks = _split_text(cleaned)
     return [
         DocumentChunk(
-            chunk_id=_chunk_id(document_name, page_or_slide, cleaned),
-            text=cleaned,
-            source=source,
+            chunk_id=_chunk_id(document_name, page_or_slide, chunk_text),
+            text=chunk_text,
+            source=SourceEvidence(
+                document=document_name,
+                page_or_slide=page_or_slide,
+                section=section,
+                excerpt=chunk_text,
+                image_path=image_path,
+            ),
             modality="visual" if image_path else "text",
         )
+        for chunk_text in chunks
     ]
 
 

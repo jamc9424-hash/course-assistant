@@ -114,7 +114,7 @@ The implementation provides:
 
 - PDF, PPTX, PPT, ODP, DOCX, TXT, and Markdown ingestion paths;
 - PDF page and optional LibreOffice-rendered presentation image preservation with source page/slide metadata;
-- separate keyword and visual indexes, optional text/visual embedding indexes, and reranking adapters;
+- separate keyword, local text-embedding, and visual-embedding indexes, with optional class-service embeddings and multimodal reranking;
 - structured answers with `answer` and `sources` fields;
 - missing-information responses when retrieval finds no supporting evidence;
 - material/topic filtering and deterministic multiple-choice quizzes with fixed answer keys;
@@ -125,7 +125,7 @@ The implementation provides:
 
 The upload manager accepts PDF, PPTX, PPT, ODP, DOCX, TXT, and Markdown. Unsupported formats are rejected without entering the store, parser failures are reported without leaving partial artifacts, and re-uploading identical bytes is skipped even if the filename changes. Uploads are capped at 150 MB.
 
-The baseline runs without class credentials using keyword retrieval. When `CLASS_SERVICE_API_KEY` is present in the ignored local environment, the assistant uses 9001 for grounded multimodal answer synthesis, 9002 for text embeddings, 9003 for visual embeddings, 9004 for multimodal reranking, and 9005 for document parsing. If a service is unavailable, the app falls back to its local evidence-preserving path.
+The baseline runs without class credentials using keyword retrieval plus deterministic local text and visual embedding indexes. When `CLASS_SERVICE_API_KEY` is present in the ignored local environment, the assistant uses 9001 for grounded multimodal answer synthesis, 9002 for text embeddings, 9003 for visual embeddings, 9004 for multimodal reranking, and 9005 for document parsing. If a service is unavailable, the app falls back to its local evidence-preserving path.
 
 ## Architecture diagram
 
