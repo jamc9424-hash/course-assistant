@@ -139,7 +139,7 @@ The assignment question set, comparison protocol, saved results, and investigate
 
 ## Screenshots
 
-These screenshots were refreshed from the redesigned live `main` application at commit `9e144f7` using a clearly labeled synthetic, non-course demo PDF. They demonstrate the Quizlet-inspired study workspace, grounded answer flow, retrieved visual evidence, and practice-quiz interface without redistributing restricted Canvas content. Replace them with permitted course-material captures before submission if the team has approval.
+These screenshots were refreshed from the current hybrid-RAG `main` application at commit `4587e42` using a clearly labeled synthetic, non-course demo PDF. They demonstrate the Quizlet-inspired study workspace, grounded answer flow, retrieved visual evidence, clean practice-test questions, and readable feedback without redistributing restricted Canvas content. Replace them with permitted course-material captures before submission if the team has approval.
 
 ### Answer with retrieved slide
 
