@@ -32,23 +32,21 @@ def test_complete_user_workflow_from_upload_to_removal(tmp_path):
     assert answer["sources"][0]["document"] == "course-notes.txt"
     assert images == []
 
-    quiz_json, quiz = _quiz(store, "course-notes.txt", "", 2)
-    public_quiz = json.loads(quiz_json)
+    quiz_markdown, quiz = _quiz(store, "course-notes.txt", "", 2)
     assert quiz is not None
-    assert len(public_quiz["questions"]) == 2
-    assert all("correct_choice" not in item for item in public_quiz["questions"])
+    assert "## Practice test" in quiz_markdown
+    assert "**A.**" in quiz_markdown
+    assert "correct_choice" not in quiz_markdown
 
     first_question = quiz.questions[0]
-    score_json = _score(
+    score_markdown = _score(
         quiz,
         json.dumps({first_question.question_id: first_question.correct_choice}),
         "",
     )
-    feedback = json.loads(score_json)
-    assert feedback["score"] == 1
-    assert feedback["answered"] == 1
-    assert len(feedback["feedback"]) == 1
-    assert feedback["feedback"][0]["source"]["document"] == "course-notes.txt"
+    assert "## Practice test results" in score_markdown
+    assert "Score: **1 / 2**" in score_markdown
+    assert "course-notes.txt" in score_markdown
 
     store, remaining, removal_status = _remove_file(document_id, store)
     assert remaining == []

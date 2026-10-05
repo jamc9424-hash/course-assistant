@@ -1,4 +1,4 @@
-from course_assistant.app import _add_files, _refresh_session, _remove_file, _score
+from course_assistant.app import _add_files, _feedback_markdown, _quiz_markdown, _refresh_session, _remove_file, _score
 from course_assistant.ingest import ingest_text
 from course_assistant.materials import MaterialStore
 from course_assistant.quiz import build_quiz
@@ -49,3 +49,34 @@ def test_refresh_session_clears_materials_and_practice_state(tmp_path):
     assert refreshed[9] == ""
     assert refreshed[10] is None
     assert refreshed[11] == "{}"
+
+
+def test_practice_materials_render_as_clean_markdown_without_solution_leakage():
+    chunks = [
+        ingest_text("Retrieval uses indexed evidence from course materials.", "notes.txt")[0],
+        ingest_text("Sources identify the supporting document and location.", "notes.txt")[0],
+    ]
+    quiz = build_quiz(chunks, question_count=1)
+
+    rendered = _quiz_markdown(quiz)
+    feedback = _feedback_markdown({
+        "score": 1,
+        "total": 1,
+        "answered": 1,
+        "feedback": [{
+            "question_id": "q1",
+            "answered": True,
+            "correct": True,
+            "selected_choice": 0,
+            "correct_choice": 0,
+            "explanation": "The statement is supported by the material.",
+            "source": {"document": "notes.txt", "page_or_slide": "page 1", "excerpt": "Retrieval uses indexed evidence from course materials."},
+        }],
+    })
+
+    assert "## Practice test" in rendered
+    assert "**A.**" in rendered
+    assert "correct_choice" not in rendered
+    assert "## Practice test results" in feedback
+    assert "Score: **1 / 1**" in feedback
+    assert "notes.txt" in feedback

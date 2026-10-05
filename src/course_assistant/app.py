@@ -95,12 +95,67 @@ def _answer(store: MaterialStore | None, material: str, topic: str, question: st
     return response.as_dict(), list(dict.fromkeys(image_paths))
 
 
+def _quiz_markdown(quiz: Quiz) -> str:
+    lines = [
+        "## Practice test",
+        "Work through each question before checking your answers. Solutions remain hidden until you submit or reveal one.",
+        "",
+    ]
+    for index, question in enumerate(quiz.questions, start=1):
+        lines.append(f"### {index}. {question.prompt}")
+        for choice_index, choice in enumerate(question.choices):
+            letter = chr(65 + choice_index)
+            lines.append(f"- **{letter}.** {choice}")
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
+def _feedback_markdown(feedback: dict[str, object]) -> str:
+    score = int(feedback.get("score", 0))
+    total = int(feedback.get("total", 0))
+    answered = int(feedback.get("answered", 0))
+    lines = [
+        "## Practice test results",
+        f"### Score: **{score} / {total}**",
+        f"Answered: **{answered} of {total}**",
+        "",
+    ]
+    items = feedback.get("feedback", [])
+    if not items:
+        lines.append("Answer at least one question or enter a question ID to reveal its solution.")
+        return "\n".join(lines)
+    lines.append("### Review your responses")
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        question_id = item.get("question_id", "question")
+        icon = "✅ Correct" if item.get("correct") else "❌ Review"
+        lines.append(f"#### {icon} · {question_id}")
+        if item.get("answered"):
+            selected = item.get("selected_choice")
+            lines.append(f"Your choice: **Option {int(selected) + 1}**")
+        lines.append(f"Correct choice: **Option {int(item.get('correct_choice', 0)) + 1}**")
+        explanation = str(item.get("explanation", "")).strip()
+        if explanation:
+            lines.append(f"\n> {explanation}")
+        source = item.get("source", {})
+        if isinstance(source, dict):
+            location = source.get("page_or_slide") or source.get("section") or "selected material"
+            document = source.get("document", "course material")
+            excerpt = str(source.get("excerpt", "")).strip()
+            lines.append(f"\n**Source:** `{document}` · {location}")
+            if excerpt:
+                lines.append(f"> {excerpt}")
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
 def _quiz(store: MaterialStore | None, material: str, topic: str, count: int) -> tuple[str, Quiz | None]:
     try:
         quiz = _assistant_from_store(store or MaterialStore()).quiz(material or None, topic or None, int(count))
     except (ValueError, OSError) as exc:
         return json.dumps({"error": str(exc)}), None
-    return json.dumps({"questions": [question.public_dict() for question in quiz.questions]}, indent=2), quiz
+    return _quiz_markdown(quiz), quiz
 
 
 def _score(quiz: Quiz | None, answers_json: str, reveal_question_id: str) -> str:
@@ -111,13 +166,12 @@ def _score(quiz: Quiz | None, answers_json: str, reveal_question_id: str) -> str
         if not isinstance(answers, dict):
             raise ValueError("answers must be a JSON object of question_id to choice index")
         from .quiz import feedback_quiz
-        return json.dumps(
+        return _feedback_markdown(
             feedback_quiz(
                 quiz,
                 {str(k): int(v) for k, v in answers.items()},
                 reveal_question_id=reveal_question_id.strip() or None,
-            ),
-            indent=2,
+            )
         )
     except (ValueError, TypeError, json.JSONDecodeError) as exc:
         return json.dumps({"error": f"answers must be a JSON object of question_id to choice index: {exc}"})
@@ -215,13 +269,13 @@ def build_app():
                         with gr.Row():
                             count = gr.Number(value=5, minimum=1, maximum=20, precision=0, label="Number of questions")
                             quiz_button = gr.Button("Create practice quiz", variant="primary")
-                        quiz_output = gr.Code(label="Practice questions · solutions hidden", language="json", elem_classes="study-output")
+                        quiz_output = gr.Markdown("Your practice questions will appear here.", elem_classes="study-output")
                         quiz_state = gr.State(None)
                         quiz_button.click(_quiz, [store_state, material, topic, count], [quiz_output, quiz_state])
-                        answers = gr.Code(value="{}", label="Your answers JSON · e.g. {\"q1\": 0}", language="json")
+                        answers = gr.Code(value="{}", label="Submit answers · use question IDs and choice numbers, e.g. {\"q1\": 0}", language="json")
                         reveal_id = gr.Textbox(label="Reveal one solution (optional question ID)", placeholder="e.g. q1")
                         score_button = gr.Button("Check answers", variant="primary")
-                        score = gr.Code(label="Score and feedback", language="json", elem_classes="study-output")
+                        score = gr.Markdown("Your score and feedback will appear here.", elem_classes="study-output")
                         score_button.click(_score, [quiz_state, answers, reveal_id], score)
                 gr.Markdown("Sources stay attached to answers and feedback so you can review the original material.", elem_classes="study-tip")
             refresh_button.click(
