@@ -3,83 +3,137 @@ from __future__ import annotations
 import random
 import re
 from dataclasses import replace
-from typing import Mapping
+from typing import Callable, Mapping, Any
 
 from .models import DocumentChunk, Quiz, QuizQuestion, reveal_question
 
-
-_FOCUS_STOPWORDS = {"a", "an", "the", "is", "are", "was", "were", "using", "with", "from", "this", "that", "and", "of", "to", "in"}
-
-
-def _focus_phrase(sentence: str) -> str:
-    words = [
-        word.casefold()
-        for word in re.findall(r"[A-Za-z0-9][A-Za-z0-9-]*", sentence)
-        if word.casefold() not in _FOCUS_STOPWORDS
-    ]
-    return " ".join(words[:5]) or "the selected material"
+# Offline mode is an exact-source completion exercise, not a purported
+# conceptual MCQ with several other true course statements as choices.
+_SPLIT = re.compile(
+    r"\b(is|are|was|were|uses|use|shows|show|includes|contains|lists|"
+    r"splits|split|combines|connects|decreases|defines|supports|"
+    r"identifies|identify|minimizes|estimates|improves|measures|requires|provides)\b",
+    re.IGNORECASE,
+)
+_PLACEHOLDER = re.compile(r"^\[Visual (?:page|slide) with no extractable text\]$", re.I)
 
 
 def _sentences(text: str) -> list[str]:
-    return [part.strip() for part in re.split(r"(?<=[.!?])\s+", text) if len(part.strip()) >= 20]
+    return [part.strip() for part in re.split(r"(?<=[.!?])\s+", text) if 25 <= len(part.strip()) <= 300]
 
 
-def _question_prompt(statement: str) -> str:
-    """Turn an evidence sentence into a focused study question."""
-    words = statement.strip().rstrip(".").split()
-    subject_words: list[str] = []
-    for word in words:
-        cleaned = re.sub(r"[^A-Za-z0-9'-]", "", word)
-        if cleaned.casefold() in {"a", "an", "the"} and not subject_words:
-            continue
-        if cleaned.casefold() in {
-            "is", "are", "was", "were", "uses", "use", "shows", "show", "includes", "contains", "lists",
-            "split", "splits", "combine", "combines", "connects", "connect", "decrease", "decreases",
-            "decreasing", "defines", "define", "supports", "support", "identifies", "identify", "remain",
-        }:
-            break
-        if cleaned:
-            subject_words.append(cleaned)
-        if len(subject_words) >= 6:
-            break
-    subject = " ".join(subject_words).strip()
-    if subject:
-        return f"Which statement best describes {subject.casefold()}?"
-    return "Which statement is directly supported by the selected course material?"
+def _fact(sentence: str) -> tuple[str, str] | None:
+    if _PLACEHOLDER.match(sentence) or sentence.startswith("["):
+        return None
+    match = _SPLIT.search(sentence)
+    if not match:
+        return None
+    prefix = sentence[:match.end()].strip()
+    completion = sentence[match.end():].strip().rstrip(".!?;: ")
+    if len(prefix.split()) < 2 or len(completion.split()) < 2 or len(completion.split()) > 20:
+        return None
+    return prefix, completion
 
 
 def build_quiz(chunks: list[DocumentChunk], question_count: int = 5, seed: int = 0) -> Quiz:
+    if question_count < 1:
+        raise ValueError("question count must be positive")
     rng = random.Random(seed)
-    candidates = []
-    seen_statements = set()
+    candidates: list[tuple[DocumentChunk, str, str]] = []
+    seen: set[tuple[str, str]] = set()
     for chunk in chunks:
         for sentence in _sentences(chunk.text):
-            key = sentence.casefold()
-            if key not in seen_statements:
-                seen_statements.add(key)
-                candidates.append((chunk, sentence))
+            fact = _fact(sentence)
+            if fact and (fact[0].casefold(), fact[1].casefold()) not in seen:
+                seen.add((fact[0].casefold(), fact[1].casefold()))
+                candidates.append((DocumentChunk(
+                    chunk.chunk_id, sentence, replace(chunk.source, excerpt=sentence), chunk.modality
+                ), *fact))
     if len(candidates) < 2:
-        raise ValueError("selected materials need at least two distinct supported statements for a multiple-choice quiz")
+        raise ValueError("selected materials need at least two distinct extractable statements for practice questions")
     rng.shuffle(candidates)
     questions: list[QuizQuestion] = []
-    for index, (chunk, correct) in enumerate(candidates[:question_count]):
-        distractors = [
-            sentence for other, sentence in candidates
-            if sentence != correct and _focus_phrase(sentence) != _focus_phrase(correct)
-        ]
-        distractors = distractors[:3]
+    for chunk, prefix, correct in candidates:
+        alternatives = list(dict.fromkeys(
+            ending for _, other_prefix, ending in candidates
+            if ending.casefold() != correct.casefold()
+            and other_prefix.casefold() != prefix.casefold()
+
+        ))[:3]
+        if not alternatives:
+            continue
+        choices = [correct, *alternatives]
+        rng.shuffle(choices)
+        questions.append(QuizQuestion(
+            question_id=f"q{len(questions) + 1}",
+            prompt=f"Complete this exact course-material statement: “{prefix} ___”",
+            choices=tuple(choices),
+            correct_choice=choices.index(correct),
+            source=chunk.source,
+        ))
+        if len(questions) == question_count:
+            break
+    if not questions:
+        raise ValueError("selected materials do not have enough distinct extractable statements")
+    return Quiz(questions=tuple(questions))
+
+
+def build_generated_quiz(
+    chunks: list[DocumentChunk],
+    generate: Callable[..., dict[str, Any] | None],
+    question_count: int = 5,
+    seed: int = 0,
+) -> Quiz:
+    """Reject malformed/unanchored model items; never invent an answer key."""
+    if question_count < 1:
+        raise ValueError("question count must be positive")
+    rng = random.Random(seed)
+    candidates = [chunk for chunk in chunks if chunk.text and not _PLACEHOLDER.fullmatch(chunk.text.strip())]
+    rng.shuffle(candidates)
+    questions: list[QuizQuestion] = []
+    seen: set[str] = set()
+    for chunk in candidates[:max(question_count * 3, 8)]:
+        try:
+            item = generate(chunk.text, image_path=chunk.source.image_path)
+        except (OSError, RuntimeError, ValueError):
+            break
+        if not isinstance(item, dict):
+            continue
+        prompt, correct, distractors, explanation = (
+            item.get("prompt"), item.get("correct"), item.get("distractors"), item.get("explanation")
+        )
+        if not all(isinstance(value, str) and value.strip() for value in (prompt, correct, explanation)):
+            continue
+        if not isinstance(distractors, list) or len(distractors) != 3 or not all(
+            isinstance(value, str) and value.strip() for value in distractors
+        ):
+            continue
+        if len(prompt) > 300 or len(correct) > 100 or len(explanation) > 500:
+            continue
+        if correct.casefold() not in chunk.text.casefold() or prompt.casefold() in seen:
+            continue
+        if len({choice.casefold().strip() for choice in [correct, *distractors]}) != 4:
+            continue
+        if any(value.casefold() in chunk.text.casefold() for value in distractors):
+            continue
+        seen.add(prompt.casefold())
         choices = [correct, *distractors]
         rng.shuffle(choices)
-        questions.append(
-            QuizQuestion(
-                question_id=f"q{index + 1}",
-                prompt=_question_prompt(correct),
-                choices=tuple(choices),
-                correct_choice=choices.index(correct),
-                source=chunk.source,
-            )
-        )
-    return Quiz(questions=tuple(questions))
+        excerpt = next((sentence for sentence in _sentences(chunk.text)
+                        if correct.casefold() in sentence.casefold()), chunk.text)
+        questions.append(QuizQuestion(
+            question_id=f"q{len(questions) + 1}",
+            prompt=prompt.strip(),
+            choices=tuple(choices),
+            correct_choice=choices.index(correct),
+            source=replace(chunk.source, excerpt=excerpt),
+            explanation=explanation.strip(),
+        ))
+        if len(questions) >= question_count:
+            break
+    if not questions:
+        raise ValueError("vision model did not produce a verifiable source-grounded practice question")
+    return Quiz(tuple(questions))
 
 
 def score_quiz(quiz: Quiz, answers: Mapping[str, int]) -> dict[str, int]:
@@ -115,6 +169,7 @@ def feedback_quiz(
             "correct": answered and selected == question.correct_choice,
             "selected_choice": selected,
             "correct_choice": revealed.correct_choice,
+            "choices": list(question.choices),
             "explanation": revealed.explanation,
             "source": revealed.source.as_dict(),
         }

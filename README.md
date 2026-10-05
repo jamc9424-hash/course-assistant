@@ -81,8 +81,8 @@ In the app, upload files through **Add course materials**. The uploaded-material
 1. Launch with `python -m course_assistant.app` and open the local Gradio URL shown in the terminal, normally `http://127.0.0.1:7860`.
 2. In **Add course materials**, upload one or more supported files. The interface reports duplicate uploads and displays each document ID.
 3. To remove a document, copy its ID into **Document ID to remove** and select **Remove document**. The document's chunks and generated images are deleted from the active session.
-4. In **Ask**, optionally enter a material filename and topic filter, enter a question, and select **Answer**. Review the separate `answer` and `sources` fields, excerpts, document/page or slide locations, and retrieved slide images.
-5. In **Practice quiz**, choose a question count and optional filters, select **Generate quiz**, and keep the returned answer key private. Submit a JSON answer map such as `{"q1": 0}` or request one question's solution; feedback includes the score, explanation, and supporting sources.
+4. In **Ask a question**, optionally filter by material/topic, enter a specific question, and select **Ask Course Assistant**. Read the answer and numbered source excerpts together; visual sources include their original page image. Internally the API retains separate `answer` and `sources` fields.
+5. In **Practice quiz**, select a count, choose answers with the on-screen radio buttons, then select **Check answers**. Solutions remain hidden until submission or explicit reveal. With the class vision service configured, the app requests source-anchored conceptual questions; without it, the safe offline mode offers exact-source statement completion instead of pretending other true facts are wrong answers. If too few distinct supported facts exist, the app generates fewer questions or refuses.
 6. Rerun the automated checks with `pytest`, or separately with `pytest -m "not e2e" -q` and `pytest -m e2e -q`.
 
 ## Deployment
@@ -125,7 +125,7 @@ The implementation provides:
 
 The upload manager accepts PDF, PPTX, PPT, ODP, DOCX, TXT, and Markdown. Unsupported formats are rejected without entering the store, parser failures are reported without leaving partial artifacts, and re-uploading identical bytes is skipped even if the filename changes. Uploads are capped at 150 MB.
 
-The baseline runs without class credentials using keyword retrieval plus deterministic local text and visual embedding indexes. When `CLASS_SERVICE_API_KEY` is present in the ignored local environment, the assistant uses 9001 for grounded multimodal answer synthesis, 9002 for text embeddings, 9003 for visual embeddings, 9004 for multimodal reranking, and 9005 for document parsing. If a service is unavailable, the app falls back to its local evidence-preserving path.
+The baseline runs without class credentials using keyword retrieval plus deterministic hashed token/ngram indexes (these are **not semantic embeddings**). When `CLASS_SERVICE_API_KEY` is present in the ignored local environment and HTTP is explicitly permitted on a trusted network, the assistant can use 9001 for grounded multimodal answers and conceptual quiz drafting, 9002 for text embeddings, 9003 for visual embeddings, 9004 for multimodal reranking, and 9005 for visual parsing. Search rejects zero/negative vector matches, source IDs in model answers must be in range, and unsupported numerical claims fall back to extractive evidence. The offline path cannot explain a scanned image with no extracted text; it abstains instead. See [`docs/evidence-first-evaluation.md`](docs/evidence-first-evaluation.md) for measured checks and remaining quality gaps.
 
 ## Architecture diagram
 
@@ -139,7 +139,7 @@ The assignment question set, comparison protocol, saved results, and investigate
 
 ## Screenshots
 
-These screenshots were refreshed from the current hybrid-RAG `main` application at commit `4587e42` using a clearly labeled synthetic, non-course demo PDF. They demonstrate the Quizlet-inspired study workspace, grounded answer flow, retrieved visual evidence, clean practice-test questions, and readable feedback without redistributing restricted Canvas content. Replace them with permitted course-material captures before submission if the team has approval.
+These **historical** screenshots were captured from commit `4587e42` using a synthetic, non-course demo PDF. They do not depict the redesigned radio-button practice flow or establish quality on course material. Replace them with new permitted-material captures after an actual live evaluation.
 
 ### Answer with retrieved slide
 

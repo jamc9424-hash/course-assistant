@@ -92,11 +92,10 @@ def _refresh_session():
         "",
         "",
         "",
-        {"answer": "", "sources": []},
+        "",
         [],
         "",
         None,
-        "{}",
         "",
         "",
     )
@@ -112,6 +111,19 @@ def _answer(store: MaterialStore | None, material: str, topic: str, question: st
             location = source.page_or_slide or source.section or "source visual"
             image_paths.append((source.image_path, f"{source.document} — {location}"))
     return response.as_dict(), list(dict.fromkeys(image_paths))
+
+
+def _answer_display(store: MaterialStore | None, material: str, topic: str, question: str):
+    response, images = _answer(store, material, topic, question)
+    lines = ["## Answer", str(response["answer"]), ""]
+    for index, source in enumerate(response["sources"], start=1):
+        location = source.get("page_or_slide") or source.get("section") or "course material"
+        lines.append(f"**[{index}] {source['document']} · {location}**")
+        lines.append(f"> {source['excerpt']}")
+        if source.get("visual_description"):
+            lines.append("*Model-generated visual description; check the image below.*")
+        lines.append("")
+    return "\n".join(lines), images
 
 
 def _quiz_markdown(quiz: Quiz) -> str:
@@ -152,8 +164,13 @@ def _feedback_markdown(feedback: dict[str, object]) -> str:
         lines.append(f"#### {icon} · {question_id}")
         if item.get("answered"):
             selected = item.get("selected_choice")
-            lines.append(f"Your choice: **Option {int(selected) + 1}**")
-        lines.append(f"Correct choice: **Option {int(item.get('correct_choice', 0)) + 1}**")
+            choices = item.get("choices", [])
+            chosen_text = choices[selected] if isinstance(choices, list) and isinstance(selected, int) and 0 <= selected < len(choices) else ""
+            lines.append(f"Your choice: **{chr(65 + int(selected))}. {chosen_text}**")
+        correct = int(item.get("correct_choice", 0))
+        choices = item.get("choices", [])
+        correct_text = choices[correct] if isinstance(choices, list) and 0 <= correct < len(choices) else ""
+        lines.append(f"Correct choice: **{chr(65 + correct)}. {correct_text}**")
         explanation = str(item.get("explanation", "")).strip()
         if explanation:
             lines.append(f"\n> {explanation}")
@@ -184,16 +201,55 @@ def _score(quiz: Quiz | None, answers_json: str, reveal_question_id: str) -> str
         answers = json.loads(answers_json or "{}")
         if not isinstance(answers, dict):
             raise ValueError("answers must be a JSON object of question_id to choice index")
+        valid = {question.question_id: question for question in quiz.questions}
+        if any(key not in valid or isinstance(value, bool) or not isinstance(value, int)
+               or not 0 <= value < len(valid[key].choices) for key, value in answers.items()):
+            raise ValueError("answers must use current question IDs and valid zero-based choice indices")
         from .quiz import feedback_quiz
         return _feedback_markdown(
             feedback_quiz(
                 quiz,
-                {str(k): int(v) for k, v in answers.items()},
+                answers,
                 reveal_question_id=reveal_question_id.strip() or None,
             )
         )
     except (ValueError, TypeError, json.JSONDecodeError) as exc:
         return json.dumps({"error": f"answers must be a JSON object of question_id to choice index: {exc}"})
+
+
+def _quiz_choices(store: MaterialStore | None, material: str, topic: str, count: int):
+    import gradio as gr
+    markdown, quiz = _quiz(store, material, topic, count)
+    if quiz:
+        markdown = (f"## Practice test · {len(quiz.questions)} question(s)\n"
+                    "Select one answer per question. Solutions stay hidden until you check or reveal."
+                    + ("\n\nOnly this many distinct source-grounded questions could be generated."
+                       if len(quiz.questions) < int(count) else ""))
+    controls = []
+    for index in range(20):
+        if quiz and index < len(quiz.questions):
+            question = quiz.questions[index]
+            choices = [(f"{chr(65 + i)}. {choice}", i) for i, choice in enumerate(question.choices)]
+            controls.append(gr.update(label=f"{index + 1}. {question.prompt}", choices=choices, value=None, visible=True))
+        else:
+            controls.append(gr.update(choices=[], value=None, visible=False))
+    return (markdown, quiz, *controls)
+
+
+def _score_choices(quiz: Quiz | None, reveal_question_id: str, *values: int | None) -> str:
+    if not quiz:
+        return "Generate a quiz first."
+    from .quiz import feedback_quiz
+    answers = {question.question_id: values[index] for index, question in enumerate(quiz.questions)
+               if index < len(values) and isinstance(values[index], int)
+               and not isinstance(values[index], bool) and 0 <= values[index] < len(question.choices)}
+    return _feedback_markdown(feedback_quiz(quiz, answers, reveal_question_id.strip() or None))
+
+
+def _clear_practice():
+    import gradio as gr
+    return (None, "Study set changed. Create a new practice quiz.", "", "",
+            *[gr.update(choices=[], value=None, visible=False) for _ in range(20)])
 
 
 QUIZLET_CSS = """
@@ -266,11 +322,11 @@ def build_app():
                 materials_view = gr.JSON(label="Your study set", elem_classes="study-output")
                 upload_status = gr.Markdown()
                 refresh_button = gr.Button("↻ Refresh study session", variant="secondary")
-                files.upload(_add_files, [files, store_state], [store_state, materials_view, upload_status])
+                upload_event = files.upload(_add_files, [files, store_state], [store_state, materials_view, upload_status])
                 with gr.Row():
                     remove_id = gr.Textbox(label="Document ID to remove", scale=3)
                     remove_button = gr.Button("Remove from set", variant="secondary", scale=1)
-                remove_button.click(_remove_file, [remove_id, store_state], [store_state, materials_view, upload_status])
+                remove_event = remove_button.click(_remove_file, [remove_id, store_state], [store_state, materials_view, upload_status])
             with gr.Group(elem_classes="study-card"):
                 gr.Markdown("## 2. Study your way", elem_classes="study-heading")
                 gr.Markdown("Choose a material or topic filter, then ask a question or practice what you know.", elem_classes="study-help")
@@ -281,27 +337,32 @@ def build_app():
                     with gr.Tab("Ask a question"):
                         question = gr.Textbox(label="What do you want to understand?", placeholder="Ask about a concept, diagram, chart, or slide…", lines=3)
                         ask_button = gr.Button("Ask Course Assistant", variant="primary")
-                        answer = gr.JSON(label="Answer and sources", elem_classes="study-output")
+                        answer = gr.Markdown("Your grounded answer and source excerpts will appear here.", elem_classes="study-output")
                         evidence_image = gr.Gallery(label="Retrieved visual evidence", columns=2, height="auto", elem_classes="study-output")
-                        ask_button.click(_answer, [store_state, material, topic, question], [answer, evidence_image])
+                        ask_button.click(_answer_display, [store_state, material, topic, question], [answer, evidence_image])
                     with gr.Tab("Practice quiz"):
                         with gr.Row():
                             count = gr.Number(value=5, minimum=1, maximum=20, precision=0, label="Number of questions")
                             quiz_button = gr.Button("Create practice quiz", variant="primary")
                         quiz_output = gr.Markdown("Your practice questions will appear here.", elem_classes="study-output")
                         quiz_state = gr.State(None)
-                        quiz_button.click(_quiz, [store_state, material, topic, count], [quiz_output, quiz_state])
-                        answers = gr.Code(value="{}", label="Submit answers · use question IDs and choice numbers, e.g. {\"q1\": 0}", language="json")
+                        answer_controls = [gr.Radio(choices=[], visible=False, label=f"Question {index + 1}") for index in range(20)]
+                        quiz_button.click(_quiz_choices, [store_state, material, topic, count], [quiz_output, quiz_state, *answer_controls])
                         reveal_id = gr.Textbox(label="Reveal one solution (optional question ID)", placeholder="e.g. q1")
                         score_button = gr.Button("Check answers", variant="primary")
                         score = gr.Markdown("Your score and feedback will appear here.", elem_classes="study-output")
-                        score_button.click(_score, [quiz_state, answers, reveal_id], score)
+                        score_button.click(_score_choices, [quiz_state, reveal_id, *answer_controls], score)
+                        clear_outputs = [quiz_state, quiz_output, score, reveal_id, *answer_controls]
+                        upload_event.then(_clear_practice, outputs=clear_outputs)
+                        remove_event.then(_clear_practice, outputs=clear_outputs)
+                        material.change(_clear_practice, outputs=clear_outputs)
+                        topic.change(_clear_practice, outputs=clear_outputs)
                 gr.Markdown("Sources stay attached to answers and feedback so you can review the original material.", elem_classes="study-tip")
             refresh_button.click(
                 _refresh_session,
                 inputs=[],
-                outputs=[store_state, files, materials_view, upload_status, material, topic, question, answer, evidence_image, quiz_output, quiz_state, answers, reveal_id, score],
-            )
+                outputs=[store_state, files, materials_view, upload_status, material, topic, question, answer, evidence_image, quiz_output, quiz_state, reveal_id, score],
+            ).then(lambda: [gr.update(choices=[], value=None, visible=False) for _ in range(20)], outputs=answer_controls)
     return demo
 
 

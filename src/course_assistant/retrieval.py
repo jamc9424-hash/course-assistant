@@ -13,7 +13,7 @@ from typing import Protocol
 from .models import DocumentChunk, RetrievedChunk
 
 _TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]*")
-_STOPWORDS = {"a", "an", "the", "does", "do", "is", "are", "what", "how", "of", "to", "in", "and"}
+_STOPWORDS = {"a", "an", "the", "does", "do", "is", "are", "what", "how", "of", "to", "in", "and", "for", "about", "tell", "me", "explain", "please", "course", "material", "slide", "page"}
 
 
 def _tokens(value: str) -> list[str]:
@@ -90,8 +90,9 @@ class VectorIndex:
 
     def search(self, query_vector: list[float], top_k: int = 8) -> list[RetrievedChunk]:
         ranked = [
-            RetrievedChunk(chunk, _cosine(query_vector, vector), "embedding")
+            RetrievedChunk(chunk, score, "embedding")
             for chunk, vector in zip(self.chunks, self.vectors)
+            if (score := _cosine(query_vector, vector)) > 0.0
         ]
         return sorted(ranked, key=lambda item: item.score, reverse=True)[:top_k]
 
@@ -138,12 +139,12 @@ class HybridRetriever:
             else:
                 query_vector = LocalEmbeddingIndex.embed(query)
             channel_results.append(self.text_vector_index.search(query_vector, top_k * 3))
-            if self.visual_vector_index:
-                if self.embedding_client:
-                    visual_query_vector = self.embedding_client.embed_visual([{"text": query}])[0]
-                else:
-                    visual_query_vector = LocalEmbeddingIndex.embed(query)
-                channel_results.append(self.visual_vector_index.search(visual_query_vector, top_k * 3))
+        if self.visual_vector_index:
+            if self.embedding_client:
+                visual_query_vector = self.embedding_client.embed_visual([{"text": query}])[0]
+            else:
+                visual_query_vector = LocalEmbeddingIndex.embed(query)
+            channel_results.append(self.visual_vector_index.search(visual_query_vector, top_k * 3))
 
         fused: dict[str, tuple[DocumentChunk, float, list[str]]] = {}
         for results in channel_results:
@@ -163,15 +164,22 @@ class HybridRetriever:
             RetrievedChunk(chunk, score, "+".join(channels))
             for chunk, score, channels in fused.values()
         ]
-        if self.reranker:
-            reranked = [(self.reranker.score(query, item.chunk), item) for item in merged]
-            reranked.sort(key=lambda pair: (pair[0], pair[1].score), reverse=True)
-            return [item for _, item in reranked[:top_k]]
-        return sorted(
+        ordered = sorted(
             merged,
             key=lambda item: (item.score, bool(item.chunk.source.image_path)),
             reverse=True,
-        )[:top_k]
+        )
+        if self.reranker and ordered:
+            try:
+                score_many = getattr(self.reranker, "score_many", None)
+                scores = (score_many(query, [item.chunk for item in ordered]) if score_many else
+                          [self.reranker.score(query, item.chunk) for item in ordered])
+                if len(scores) == len(ordered) and all(math.isfinite(float(score)) for score in scores):
+                    reranked = sorted(zip(scores, ordered), key=lambda pair: (float(pair[0]), pair[1].score), reverse=True)
+                    return [item for _, item in reranked[:top_k]]
+            except (RuntimeError, ValueError, TypeError, OSError):
+                pass  # Keep fused ordering when the optional service is unavailable.
+        return ordered[:top_k]
 
 
 def build_service_retriever(chunks: list[DocumentChunk], client: object) -> HybridRetriever:
