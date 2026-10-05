@@ -142,7 +142,7 @@ The assignment question set, comparison protocol, saved results, and investigate
 
 ## Screenshots
 
-Screenshots were captured from the running Gradio app using a synthetic, non-course demo PDF so no restricted Canvas content is redistributed. Replace these with permitted course-material captures before submission if the team has approval.
+These screenshots were refreshed from the merged `main` application at commit `09ee77a` using a clearly labeled synthetic, non-course demo PDF. They demonstrate the live app UI without redistributing restricted Canvas content. Replace them with permitted course-material captures before submission if the team has approval.
 
 ### Answer with retrieved slide
 
