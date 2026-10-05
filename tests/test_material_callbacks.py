@@ -1,4 +1,4 @@
-from course_assistant.app import _add_files, _feedback_markdown, _quiz_markdown, _refresh_session, _remove_file, _score
+from course_assistant.app import _add_files, _feedback_markdown, _quiz_markdown, _refresh_session, _remove_file, _score, _score_choices
 from course_assistant.ingest import ingest_text
 from course_assistant.materials import MaterialStore
 from course_assistant.quiz import build_quiz
@@ -33,6 +33,19 @@ def test_score_rejects_non_object_json_without_crashing():
     assert "JSON object" in result
 
 
+def test_score_rejects_out_of_range_choice_and_feedback_shows_choice_text():
+    quiz = build_quiz([
+        ingest_text("Retrieval uses indexed evidence.", "notes.txt")[0],
+        ingest_text("Sources identify the supporting document.", "notes.txt")[0],
+    ], question_count=1)
+    assert "error" in _score(quiz, '{"q1": 999}', "")
+    assert "error" in _score(quiz, '{"stale": 0}', "")
+    assert "Answered: **0 of 1**" in _score_choices(quiz, "", 999)
+    result = _score_choices(quiz, "", quiz.questions[0].correct_choice)
+    assert "Answered: **1 of 1**" in result
+    assert quiz.questions[0].choices[quiz.questions[0].correct_choice] in result
+
+
 def test_refresh_session_clears_materials_and_practice_state(tmp_path):
     old_store = MaterialStore(tmp_path / "artifacts")
     source = tmp_path / "notes.txt"
@@ -48,7 +61,7 @@ def test_refresh_session_clears_materials_and_practice_state(tmp_path):
     assert refreshed[5] == ""
     assert refreshed[9] == ""
     assert refreshed[10] is None
-    assert refreshed[11] == "{}"
+    assert refreshed[11] == ""
 
 
 def test_practice_materials_render_as_clean_markdown_without_solution_leakage():

@@ -4,9 +4,46 @@ from dataclasses import dataclass, replace
 import re
 
 from .models import AnswerResponse, DocumentChunk, SourceEvidence, validate_answer
-from .quiz import build_quiz
+from .quiz import build_quiz, build_generated_quiz
 from .services import ServiceReranker, image_path_to_data_url
 from .retrieval import HybridRetriever, KeywordIndex, LocalEmbeddingIndex, _tokens, build_service_retriever
+
+_FACT_INTENTS = {
+    "deadline": ("deadline", "due", "date", "submit by"),
+    "weight": ("weight", "percent", "percentage", "%", "worth"),
+    "cost": ("cost", "price", "fee", "$"),
+    "cancellation": ("cancelled", "canceled", "cancellation", "postponed"),
+}
+
+
+def _missing_requested_fact(question: str, evidence: str) -> bool:
+    q, text = question.casefold(), evidence.casefold()
+    return any(
+        any(re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", q) for term in terms)
+        and not any(re.search(r"(?<!\w)" + re.escape(term) + r"(?!\w)", text) for term in terms)
+        for terms in _FACT_INTENTS.values()
+    )
+
+
+def _evidence_sentence(question: str, text: str) -> str | None:
+    """Select a coherent sentence matching both subject and requested fact type."""
+    terms = set(_tokens(question))
+    intent_groups = [group for group in _FACT_INTENTS.values() if any(
+        re.search(r"(?<!\w)" + re.escape(word) + r"(?!\w)", question, re.I) for word in group
+    )]
+    subject_terms = terms - {word for group in intent_groups for word in group}
+    candidates = []
+    for sentence in re.split(r"(?<=[.!?])\s+", text):
+        overlap = len(terms & set(_tokens(sentence)))
+        if not overlap:
+            continue
+        if intent_groups and subject_terms and len(subject_terms & set(_tokens(sentence))) < min(2, len(subject_terms)):
+            continue
+        if any(not any(re.search(r"(?<!\w)" + re.escape(word) + r"(?!\w)", sentence, re.I)
+                       for word in group) for group in intent_groups):
+            continue
+        candidates.append((overlap, sentence))
+    return max(candidates, key=lambda pair: pair[0])[1] if candidates else None
 
 
 @dataclass
@@ -92,32 +129,65 @@ class CourseAssistant:
             answer = generator(question, evidence)
             if not answer:
                 return None
-            answer_terms = set(_tokens(answer))
-            evidence_terms = set(_tokens(" ".join(source.excerpt for source in sources)))
-            return answer if answer_terms & evidence_terms else None
+            citations = [int(number) for number in re.findall(r"\[(\d+)\]", answer)]
+            # A shared word is not evidence of entailment. Require explicit,
+            # in-range provenance; otherwise use the extractive fallback.
+            if not citations or any(number < 1 or number > len(sources) for number in citations):
+                return None
+            supported = " ".join(
+                sources[number - 1].excerpt + " " + (sources[number - 1].visual_description or "")
+                for number in set(citations)
+            )
+            answer_terms = set(_tokens(re.sub(r"\[\d+\]", "", answer)))
+            supported_terms = set(_tokens(supported))
+            if not answer_terms & supported_terms:
+                return None
+            # This is deliberately conservative. A cited source plus one
+            # shared keyword cannot license a new factual assertion.
+            if answer_terms - supported_terms - {"according", "source", "material", "means", "because", "therefore", "this", "that", "it"}:
+                return None
+            # Lexical overlap also licenses reordered contradictory claims.
+            # Accept only contiguous wording from cited evidence; otherwise
+            # fall back to extraction rather than assert entailment.
+            normalized_support = re.sub(r"[^a-z0-9]+", " ", supported.casefold()).strip()
+            for clause in re.split(r"\[\d+\]", answer):
+                normalized_clause = re.sub(r"[^a-z0-9]+", " ", clause.casefold()).strip()
+                if normalized_clause and normalized_clause not in normalized_support:
+                    return None
+            # Numerical claims (deadlines, amounts, weights) cannot be
+            # licensed by citing an unrelated sentence.
+            numbers = set(re.findall(r"\b\d+(?:\.\d+)?\b", answer)) - set(map(str, citations))
+            if numbers - set(re.findall(r"\b\d+(?:\.\d+)?\b", supported)):
+                return None
+            return answer
         except (OSError, RuntimeError, KeyError, IndexError, TypeError):
             return None
 
-    def _local_grounded_answer(self, question: str, sources: list[SourceEvidence], visual_explanations: list[str]) -> str:
+    def _local_grounded_answer(self, question: str, sources: list[SourceEvidence]) -> tuple[str, list[SourceEvidence]]:
         query_terms = set(_tokens(question))
-        ranked: list[tuple[int, str]] = []
+        ranked: list[tuple[int, str, SourceEvidence]] = []
         for source in sources:
             for sentence in re.split(r"(?<=[.!?])\s+", source.excerpt):
                 sentence = sentence.strip()
                 if sentence:
-                    ranked.append((len(query_terms & set(_tokens(sentence))), sentence))
+                    ranked.append((len(query_terms & set(_tokens(sentence))), sentence, source))
         ranked.sort(key=lambda item: item[0], reverse=True)
-        selected: list[str] = []
-        for overlap, sentence in ranked:
-            if overlap or not selected:
-                if sentence not in selected:
-                    selected.append(sentence)
+        selected: list[tuple[str, SourceEvidence]] = []
+        for overlap, sentence, source in ranked:
+            if overlap and sentence not in [value for value, _ in selected] and not sentence.startswith("[Visual page"):
+                selected.append((sentence, replace(source, excerpt=sentence)))
             if len(selected) >= 2:
                 break
-        answer = "The selected course materials support this answer: " + " ".join(selected)
-        if visual_explanations:
-            answer += "\n\nVisual evidence: " + " ".join(visual_explanations[:1])
-        return answer
+        if not selected:
+            return "I could not find that information in the selected course materials.", []
+        answer = "From the course material: " + " ".join(
+            f"{sentence} [{index}]" for index, (sentence, _) in enumerate(selected, 1)
+        )
+        described = [source.visual_description for _, source in selected
+                     if source.image_path and source.visual_description]
+        if described:
+            answer += "\n\nVisual description (model-generated; check the original image): " + described[0]
+        return answer, [source for _, source in selected]
 
     def ask(self, question: str, material: str | None = None, topic: str | None = None) -> AnswerResponse:
         allowed = self._filtered_chunks(material, topic)
@@ -134,26 +204,48 @@ class CourseAssistant:
             return AnswerResponse("I could not find that information in the selected course materials.", ())
         query_terms = set(_tokens(question))
         evidence_terms = set(_tokens(" ".join(item.chunk.text for item in results)))
-        required_overlap = 1 if len(query_terms) <= 2 or any(item.chunk.source.image_path for item in results) else 2
-        if len(query_terms & evidence_terms) < required_overlap:
+        required_overlap = 1 if len(query_terms) <= 2 else 2
+        visual_query = bool(re.search(r"\b(image|picture|diagram|chart|figure|visual|slide|meme)\b", question, re.I))
+        # Scanned visual-only pages have no searchable extracted terms. Allow
+        # the *remote* visual index to propose them, but never fabricate an
+        # offline answer from the placeholder text.
+        visual_only = bool(
+            visual_query and scoped.retriever.embedding_client is not None
+            and any(item.chunk.source.image_path and "embedding" in item.channel for item in results)
+        )
+        if len(query_terms & evidence_terms) < required_overlap and not visual_only:
+            return AnswerResponse("I could not find that information in the selected course materials.", ())
+        if _missing_requested_fact(question, " ".join(item.chunk.text for item in results)) and not visual_only:
             return AnswerResponse("I could not find that information in the selected course materials.", ())
         matching_results = [
             item for item in results
             if query_terms & set(_tokens(item.chunk.text))
         ]
-        results = (matching_results or results[:1])[:2]
+        results = (results if visual_only else matching_results or results[:1])[:4]
         sources = []
-        visual_explanations = []
         for item in results:
             source = item.chunk.source
+            if not visual_only:
+                sentence = _evidence_sentence(question, item.chunk.text)
+                if not sentence:
+                    continue
+                source = replace(source, excerpt=sentence)
             description = self._describe_visual(source)
             if description:
                 source = replace(source, visual_description=description)
-                visual_explanations.append(description)
             sources.append(source)
+        if not sources:
+            return AnswerResponse("I could not find that information in the selected course materials.", ())
         answer = self._generate_grounded_answer(question, sources)
         if answer is None:
-            answer = self._local_grounded_answer(question, sources, visual_explanations)
+            answer, sources = self._local_grounded_answer(question, sources)
+        else:
+            cited = {int(number) for number in re.findall(r"\[(\d+)\]", answer)}
+            positions = {original: new for new, original in enumerate(sorted(cited), 1)}
+            answer = re.sub(r"\[(\d+)\]", lambda match: f"[{positions[int(match.group(1))]}]", answer)
+            sources = [source for index, source in enumerate(sources, 1) if index in cited]
+        if answer.startswith("I could not find"):
+            return AnswerResponse(answer, ())
         evidence = {}
         for chunk in allowed:
             evidence[chunk.source.document] = evidence.get(chunk.source.document, "") + " " + chunk.text
@@ -163,4 +255,10 @@ class CourseAssistant:
         allowed = self._filtered_chunks(material, topic)
         if not allowed:
             raise ValueError("no course materials match the selection")
+        generate = getattr(self.service_client, "generate_quiz_item", None)
+        if generate:
+            try:
+                return build_generated_quiz(allowed, generate, question_count, seed)
+            except ValueError:
+                pass  # Service unavailable or invalid response: exact-source exercises only.
         return build_quiz(allowed, question_count=question_count, seed=seed)

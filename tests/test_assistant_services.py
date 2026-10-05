@@ -144,12 +144,44 @@ def test_vision_generation_survives_embedding_service_failure():
         def generate_answer(self, question, evidence):
             assert question == "When are office hours?"
             assert evidence[0]["document"] == "notes.txt"
-            return "Office hours are Tuesday at noon."
+            return "Office hours are Tuesday at noon [1]."
 
     chunk = ingest_text("Office hours are Tuesday at noon.", "notes.txt")[0]
     assistant = CourseAssistant.from_chunks([chunk], service_client=PartialService())
 
     response = assistant.ask("When are office hours?")
 
-    assert response.answer == "Office hours are Tuesday at noon."
+    assert response.answer == "Office hours are Tuesday at noon [1]."
     assert response.sources[0].document == "notes.txt"
+
+
+def test_quiz_generator_sends_adjacent_source_image_without_exposing_key(tmp_path):
+    import json
+    image = tmp_path / "page.png"
+    image.write_bytes(b"fake image")
+    calls = []
+
+    class Response:
+        def read(self):
+            item = {"prompt": "What is used?", "correct": "feature thresholds",
+                    "distractors": ["dates", "names", "labels"], "explanation": "The source says so."}
+            return json.dumps({"choices": [{"message": {"content": json.dumps(item)}}]}).encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+    def opener(request, timeout):
+        calls.append(json.loads(request.data))
+        return Response()
+
+    settings = ServiceSettings.from_env({"CLASS_SERVICE_API_KEY": "local-test-only",
+                                         "CLASS_SERVICE_ALLOW_INSECURE_HTTP": "true"})
+    item = ClassServiceClient(settings, opener=opener).generate_quiz_item(
+        "Decision trees use feature thresholds.", str(image))
+    assert item["correct"] == "feature thresholds"
+    content = calls[0]["messages"][0]["content"]
+    assert content[1]["image_url"]["url"].startswith("data:image/png;base64,")
+    assert "local-test-only" not in json.dumps(calls)
