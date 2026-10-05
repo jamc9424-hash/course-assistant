@@ -1,2 +1,5 @@
-# Bootstrap test dependency. Runtime dependencies are selected and pinned per implementation branch.
+# Bootstrap test dependencies. Runtime dependencies are selected and pinned per implementation branch.
 pytest
+# Imported by tests/test_presentation_rendering.py to build small sample decks and images.
+Pillow
+python-pptx
