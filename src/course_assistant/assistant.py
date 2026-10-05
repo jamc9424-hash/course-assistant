@@ -94,6 +94,21 @@ class CourseAssistant:
     def _describe_visual(self, source: SourceEvidence) -> str | None:
         if not self.service_client or not source.image_path:
             return None
+        describer = getattr(self.service_client, "describe_image", None)
+        if describer is not None:
+            # Preferred: the vision-capable LLM writes a short description of the slide.
+            prompt = (
+                "Describe this course slide in two to four plain sentences for a student who cannot see it. "
+                "Say what the picture, meme, diagram, chart, or table shows and quote the text that appears in it. "
+                "For a chart, give the axes and the trend. For a diagram, name the boxes in order. "
+                "Describe only what is visible and do not guess."
+            )
+            try:
+                description = describer(image_path_to_data_url(source.image_path), prompt)
+                if description:
+                    return description
+            except (OSError, RuntimeError, KeyError, IndexError, TypeError):
+                pass  # Fall back to the document parser below.
         parser = getattr(self.service_client, "parse_image", None)
         if parser is None:
             return None

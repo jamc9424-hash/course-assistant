@@ -12,7 +12,7 @@ Port 9000 is reserved for Hermes agentic use and is not used by this application
 | Text embeddings | 9002 | `nvidia/Nemotron-3-Embed-1B-BF16` | `http://dobolyi.com:9002/v2/embed` | Text-vector retrieval; send `texts` |
 | Multimodal embeddings | 9003 | `Qwen/Qwen3-VL-Embedding-2B` | `http://dobolyi.com:9003/v1/embeddings` | Text/image retrieval |
 | Multimodal reranking | 9004 | `Qwen/Qwen3-VL-Reranker-2B` | `http://dobolyi.com:9004/rerank` | Candidate relevance scoring |
-| Document parsing | 9005 | `dots.mocr` | `http://dobolyi.com:9005/v1/chat/completions` | Layout, chart, diagram, and image description |
+| Document parsing | 9005 | `dots.mocr` | `http://dobolyi.com:9005/v1/chat/completions` | Fallback text and layout reading for slide images |
 
 All default hosts and paths are configurable through environment variables in `.env.example`; no credential value is committed.
 
@@ -28,12 +28,14 @@ All default hosts and paths are configurable through environment variables in `.
 
 ## Request contracts
 
-- **9001 vision answer LLM:** OpenAI-compatible chat-completions payload with a text instruction, grounded excerpts, and optional `image_url` data URLs. The answer prompt explicitly forbids unsupported claims and asks the model to rely only on supplied evidence.
-- **9002 text embeddings:** service-specific payload with `model` and non-empty `texts`; query and passage prefixes are used by the retriever.
-- **9003 multimodal embeddings:** payload with `model` and `input`; visual candidates may contain text and image data URLs.
-- **9004 reranking:** payload with `model`, `query`, and candidate documents containing text and/or image references.
-- **9005 document parsing:** chat-completions messages containing an image item and a conservative instruction for visible text, charts, diagrams, labels, and relationships.
+- **9001 vision answer LLM:** OpenAI-compatible chat-completions payload with a text instruction, grounded excerpts, and optional `image_url` data URLs. The answer prompt explicitly forbids unsupported claims and asks the model to rely only on supplied evidence. Thinking is turned off with a top-level `"chat_template_kwargs": {"enable_thinking": false}` field (not inside `extra_body`, which is an OpenAI SDK argument that the raw HTTP API ignores). The same model writes the short slide descriptions shown with visual evidence.
+- **9002 text embeddings:** service-specific payload with `model` and non-empty `texts`; query and passage prefixes are used by the retriever. The reply nests the vectors as `{"embeddings": {"float": [[...], ...]}}`. Requests are sent in batches of 32.
+- **9003 multimodal embeddings:** a text query is sent as `{"model": ..., "input": "<text>"}`. A slide image is sent one per request as `{"model": ..., "messages": [{"role": "user", "content": [{"type": "image_url", ...}, {"type": "text", ...}]}]}`. The reply is `data[0].embedding`. A list of image objects in `input` is rejected by the service.
+- **9004 reranking:** payload with `model`, `query`, and `documents`, where each document is either a plain string or `{"content": [{"type": "image_url", ...}, {"type": "text", ...}]}`. The reply is `results[]` with `index` and `relevance_score`; scores are matched to documents by `index`.
+- **9005 document parsing:** chat-completions messages containing an image item and an instruction. It is an OCR model, so the app uses it as the fallback for slide descriptions when the 9001 vision model is unavailable.
 - **9010 structured decisions:** if used in a future feature, send its custom `state`/`questions`/`images` schema, not chat-completions messages.
+
+These formats were confirmed against the live services on 2026-10-05 and are locked in by `tests/test_class_service_contracts.py`. Embeddings and slide descriptions are cached in memory by content, so each slide is sent to the services once per app session.
 
 The application falls back to local extractive answers and keyword retrieval when optional class services are unavailable. Remote calls are not required for the dependency-light test suite.
 
