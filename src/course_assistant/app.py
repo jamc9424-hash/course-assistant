@@ -63,6 +63,26 @@ def _remove_file(document_id: str | None, store: MaterialStore | None):
     return store, _material_view(store), status
 
 
+def _refresh_session():
+    """Reset materials, filters, answers, quiz state, and visible outputs."""
+    return (
+        MaterialStore(),
+        None,
+        [],
+        "Study session refreshed. Add materials to begin again.",
+        "",
+        "",
+        "",
+        {"answer": "", "sources": []},
+        [],
+        "",
+        None,
+        "{}",
+        "",
+        "",
+    )
+
+
 def _answer(store: MaterialStore | None, material: str, topic: str, question: str) -> tuple[dict[str, Any], list[tuple[str, str]]]:
     if not question.strip():
         return {"answer": "Enter a question.", "sources": []}, []
@@ -172,6 +192,7 @@ def build_app():
                 files = gr.File(file_count="multiple", type="filepath", label="Drop files here or browse", elem_classes="study-upload")
                 materials_view = gr.JSON(label="Your study set", elem_classes="study-output")
                 upload_status = gr.Markdown()
+                refresh_button = gr.Button("↻ Refresh study session", variant="secondary")
                 files.upload(_add_files, [files, store_state], [store_state, materials_view, upload_status])
                 with gr.Row():
                     remove_id = gr.Textbox(label="Document ID to remove", scale=3)
@@ -203,6 +224,11 @@ def build_app():
                         score = gr.Code(label="Score and feedback", language="json", elem_classes="study-output")
                         score_button.click(_score, [quiz_state, answers, reveal_id], score)
                 gr.Markdown("Sources stay attached to answers and feedback so you can review the original material.", elem_classes="study-tip")
+            refresh_button.click(
+                _refresh_session,
+                inputs=[],
+                outputs=[store_state, files, materials_view, upload_status, material, topic, question, answer, evidence_image, quiz_output, quiz_state, answers, reveal_id, score],
+            )
     return demo
 
 
