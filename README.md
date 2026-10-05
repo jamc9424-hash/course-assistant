@@ -100,7 +100,7 @@ The current merged behavior hides quiz source excerpts until answer/reveal, abst
 
 The implemented baseline is tested locally and documented in `docs/evaluation.md`. The supplied decks were evaluated with ten repeatable questions using the keyword baseline and offline hybrid fallback; aggregate results and returned slide locations are in `docs/evaluation-results.json`. That JSON is the original benchmark record and retains the historical pre-remediation Q10 failure; the current merged code includes the abstention fix and regression test, but the permitted-deck benchmark must be rerun before claiming post-fix quality results. A live comparison with class embeddings/reranking and original-slide visual recall remains pending until authorized course materials, credentials, and the optional rendering stack are available.
 
-**Update, October 5, 2026.** That live run has now been done. The class-service adapters were corrected so the app works with ports 9001 to 9005 turned on, and ten questions were run against the Week 2 to Week 5 decks with the class embeddings, with reranking on and off, and with LibreOffice slide rendering. The questions, answers, and comparison are in the [Questions](#questions) section at the bottom of this README. The earlier keyword and offline-fallback record in `docs/evaluation.md` is kept as history.
+**Update, October 5, 2026.** That live run has now been done. The class-service adapters were corrected so the app works with ports 9001 to 9005 turned on, and seven questions were run against the Week 2 to Week 5 decks and the course syllabus with the class embeddings, with reranking on and off, and with LibreOffice slide rendering. The questions, answers, and comparison are in the [Questions](#questions) section at the bottom of this README. The earlier keyword and offline-fallback record in `docs/evaluation.md` is kept as history.
 
 ## Integrated implementation
 
@@ -141,7 +141,7 @@ The assignment question set, comparison protocol, saved results, and investigate
 
 ## Screenshots
 
-These screenshots were captured on October 5, 2026 from the running app with the class services turned on and the Week 2 to Week 5 decks uploaded as PowerPoint files. The first shows an answer with the retrieved slide image for the Week 2 meme question. The second shows practice quiz feedback with the score, the correct choices, and the source for each question.
+These screenshots were captured on October 5, 2026 from the running app with the class services turned on, the Week 2 to Week 5 decks uploaded as PowerPoint files, and the syllabus uploaded as a PDF. The first shows an answer with the retrieved slide image for the Week 2 meme question. The second shows practice quiz feedback with the score, the correct choices, and the source for each question.
 
 ### Answer with retrieved slide
 
@@ -180,7 +180,7 @@ The paired posts contrast the launch of a no-handwritten-code SaaS with later re
 - LibreOffice remains the preferred path for complete PPT/PPTX/ODP slide rendering. When it is unavailable, PPTX ingestion preserves the largest original embedded picture on each slide so memes, screenshots, charts, and other raster evidence remain available for retrieval. Shape-only diagrams still require full rendering or PDF export.
 - The quiz generator is a deterministic baseline for evaluating retrieval and evidence behavior, with stable keys and source-backed feedback; a richer pedagogical writer can be added without changing the evidence contract.
 - Automated tests cover the dependency-light core, security configuration, source validation, answer-key stability, and service request construction. Live service calls are not run in CI.
-- The class-service request and response formats were corrected on October 5, 2026 after a live run showed the app crashing on the text-embedding reply and the visual-embedding and reranking requests being rejected. The working formats are recorded in `docs/class-services.md` and locked in by `tests/test_class_service_contracts.py`. Slide descriptions now come from the 9001 vision model, with the 9005 parser as a fallback, and embeddings are cached so each slide is sent to the services once per session.
+- The class-service request and response formats were corrected on October 5, 2026 after a live run showed the app crashing on the text-embedding reply and the visual-embedding and reranking requests being rejected. The working formats are recorded in `docs/class-services.md` and locked in by `tests/test_class_service_contracts.py`. Slide descriptions now come from the 9001 vision model, with the 9005 parser as a fallback, and embeddings are cached so each slide is sent to the services once per session. The app also now honors the answer model's explicit "could not find" reply. Before that fix, a question about the Quiz 1 class average was answered by reading the syllabus schedule aloud, because the schedule mentions Quiz 1.
 
 ## License
 
@@ -188,105 +188,95 @@ TBD by the project team.
 
 ## Questions
 
-We wrote ten questions to test the assistant on the Week 2 to Week 5 lecture decks. Five can be answered from slide text, four need the picture on the slide, and one cannot be answered from the materials at all. For each one we give the answer the slides support and then say what our app actually returned.
+We wrote seven questions to test the assistant on the Week 2 to Week 5 lecture decks and the course syllabus. Two can be answered from slide text, two from the syllabus, two need the picture on the slide, and one cannot be answered from the materials at all. For each one we give the answer the materials support and then say what our app actually returned.
 
-The app results come from the code on `main` on October 5, 2026, with the four decks uploaded as PowerPoint files and the class services turned on: the vision model, text embeddings, visual embeddings, the reranker, and LibreOffice slide rendering. In this setup an answer has two parts. The first part is slide text read back with numbered sources. The second part is a short description of the top slide written by the class vision model, which the app labels as model-generated and shows next to the original slide image.
+The app results come from the code on `main` on October 5, 2026, with the four decks uploaded as PowerPoint files, the syllabus uploaded as a PDF, and the class services turned on: the vision model, text embeddings, visual embeddings, the reranker, and LibreOffice slide rendering. In this setup an answer has two parts. The first part is text from the slide or page read back with numbered sources. The second part is a short description of the top slide or page written by the class vision model, which the app labels as model-generated and shows next to the original image.
 
 ### Questions answered from slide text
 
-**1. What is the difference between open-weight and closed-weight LLMs?**
-
-Open-weight models are free to download. You can run them on your own machine or through a cloud API, and running them locally keeps your work private and reproducible. Closed-weight models are the higher performing frontier models. They are easier to use and deploy through an interface or API, but the cost varies with usage or credit allowances. (Week 2, slide 4)
-
-*What the app returned:* The right slide with its image, and the slide text read back, which covers every point above.
-
-**2. How do I read a model name like Qwen3-Coder-30B-A3B-Instruct-FP8?**
-
-Read it left to right. Qwen3 is the model family and Coder is the variant. 30B-A3B is the size and type: about 30 billion parameters in total with about 3 billion active at a time, which tells you it is a mixture of experts model. Instruct means it was tuned to follow instructions, and FP8 is the quantization format. The slide also warns that naming conventions vary. (Week 2, slide 18)
-
-*What the app returned:* The right slide, plus the quantization slide as a second source. The slide uses color to show which part of the name is which, so the text read back alone does not make that clear. The slide description filled the gap and matched each label to its part of the name correctly.
-
-**3. What is ChatML, and how does the same conversation look in JSON?**
-
-ChatML, short for Chat Markup Language, is a prompt template that wraps each message in start and end tokens and labels it with a role such as system, user, or assistant. In JSON, the same conversation is a list of messages where each one has a role and a content field. A template then turns that JSON list into the ChatML text the model reads. (Week 3, slides 8 and 10)
-
-*What the app returned:* Slide 10, which shows the JSON version, the template, and the ChatML result side by side, plus the slide on how a prompt becomes model input. That is enough to answer the question. It did not return slide 8.
-
-**4. What do the slides recommend about branching, issues, and pull requests?**
+**1. What do the Week 4 slides recommend about branching, issues, and pull requests when collaborating on GitHub?**
 
 Use a branch to keep a new feature, a bug fix, or an experiment separate from main, which holds the primary version of the project. When the work is ready, merge it back in. Create issues to keep a record of tasks, discussions, and progress. Open a pull request to propose changes you want merged, so collaborators can review, discuss, and suggest revisions first. (Week 4, slides 25 and 26)
 
-*What the app returned:* Both slides, 26 and 25, so the answer covered all three topics.
+*What the app returned:* Both slides, 26 and 25, with their images. The answer covered issues, pull requests, branching, and merging.
 
-**5. Which chunking strategies are listed for preparing documents for RAG?**
+**2. Which chunking strategies are listed for preparing documents for a RAG system?**
 
 There are four. Fixed size chunking uses a set length, often with overlap. Recursive chunking splits at larger boundaries like paragraphs and then breaks oversized pieces at smaller boundaries like sentences. Document-based chunking keeps related content together using structure such as headings. Semantic chunking splits where the topic or meaning changes. (Week 5, slide 17)
 
 *What the app returned:* Slide 16 on preparing documents first, then slide 17 with the four strategies. All four appear in the answer, after the material from slide 16.
 
+### Questions answered from the syllabus
+
+**3. How is the final course grade broken down according to the syllabus?**
+
+Assignments are 20 percent, quizzes 15 percent, the final project 45 percent, the final exam 15 percent, and attendance and participation 5 percent. (Syllabus, page 2)
+
+*What the app returned:* Page 2 of the syllabus with the grading table read back. All five percentages are in the answer.
+
+**4. What is the penalty for turning in an assignment late?**
+
+The grade drops 10 percent for every calendar day the assignment is late. Nothing is accepted more than five days late. The assignment with the lowest score is dropped from the final grade. (Syllabus, pages 2 and 3)
+
+*What the app returned:* Pages 2 and 3 of the syllabus. The answer included the 10 percent per day penalty with the worked example, the five day limit, and the dropped lowest score.
+
 ### Questions that need the image on the slide
 
-**6. Find the meme about Vibe Coding on "Prod" in the Week 2 slides. What do its image and text show?**
+**5. What's the meme about vibe coding on "Prod" in week 2's course slides? Explain what the image and text show.**
 
 It is the "One does not simply" meme with Boromir from The Lord of the Rings, captioned to say that one does not simply vibe code a production-grade enterprise app. The point is that vibe coding is fine for quick prototypes, but shipping to production takes real engineering and review. (Week 2, slide 33)
 
 *What the app returned:* The right slide and the original meme image. The slide description named the Boromir meme, read the caption off the picture word for word, and explained the joke. The slide has no body text, so everything useful here came from the image.
 
-**7. What does the "Lost in the Middle" chart show about accuracy and where the answer sits in the context?**
+**6. What does the "Lost in the Middle" chart on the context engineering slides show about accuracy versus the position of the document containing the answer?**
 
 The chart is a U-shaped curve. Accuracy is highest when the document with the answer comes first, drops as that document moves toward the middle of the context, and rises again near the end. The slide adds that some newer models resist this effect better, but results still depend on the model and the task. (Week 5, slide 7)
 
-*What the app returned:* The right slide and its image. The slide description gave the axes, described the U shape with high accuracy at the start, low in the middle, and a rise at the end, and noted the flat dashed baseline.
-
-**8. Describe the hybrid RAG pipeline diagram. What are its boxes and where does the reranker sit?**
-
-The diagram starts with the question, which goes down two paths at once. One path is keyword search. The other sends the question through an embedding model and then vector search. Both paths feed a box of candidate chunks. The reranker comes right after that, and the final box is the ranked chunks with their source details, which is what gets passed to the LLM. (Week 5, slide 18)
-
-*What the app returned:* The right slide and its image. The slide description listed the boxes in order and placed the reranker between the candidate chunks and the ranked chunks, which matches the diagram.
-
-**9. In the table of other prompting techniques, what is Tree-of-Thought prompting?**
-
-The table gives it the acronym ToT and cites Yao et al. (2023). It describes giving the model a complex setting where it works through several lines of reasoning, a bit like a chess game, and backtracks when it hits inconsistencies until it settles on the best response. (Week 3, slide 23)
-
-*What the app returned:* The right slide and the image of the table. The slide description listed all seven techniques with their acronyms, including ToT, but it did not give the Tree-of-Thought description or its paper. We count this one as partly answered. The description is written once per slide and is not tailored to the question, so a detail in one row of a table can get left out. The student can still read it off the slide image the app shows.
+*What the app returned:* The right slide and its image. The slide description gave the axes and described the U shape, with high accuracy at the start, low in the middle, and a rise at the end.
 
 ### The question the materials cannot answer
 
-**10. When is Assignment 2 due, and what percentage of the course grade is it worth?**
+**7. What was the class average on Quiz 1?**
 
 *What the app returned:* "I could not find that information in the selected course materials." It cited no sources, which is exactly what we want.
 
-This cannot be answered because the information is not in anything we uploaded. Due dates and grade weights are in the syllabus and on Canvas, and we only gave the app the lecture decks. The decks do include class exercise slides, so a careless system could grab one of those and make up a date. Ours admits it does not know. If the syllabus is uploaded later, this question becomes answerable and a different one should take its place, such as asking for the instructor's phone number.
+This cannot be answered because no document we uploaded reports quiz results. The syllabus says quizzes are worth 15 percent of the grade and its schedule lists Quiz 1 in Week 6, but it says nothing about how the class did. Scores like that would come from Canvas or an announcement, not from slides or a syllabus.
+
+This question also exposed a real failure that we investigated. The first time we ran it, the app did not refuse. Because the schedule mentions "Quiz 1", the search matched that page and the app read the whole schedule back as if it were an answer. When we looked closer, the class answer model had correctly replied that it could not find the information, but the app discarded that reply because it contained no citations and fell back to reading the page aloud. We changed the app to honor the model's "could not find" reply, added a test for it, and reran the question. It now refuses, with reranking on and off.
 
 ### Comparing two approaches: reranking on and off
 
-We ran the same ten questions on the same four decks twice. The only difference was whether the class reranker on port 9004 reordered the retrieved slides. Everything else stayed the same: keyword search, class text embeddings, class visual embeddings, and the vision model. We judged correctness by hand against the answers above. Times are single runs measured from asking to receiving the answer, after the decks were indexed.
+We ran the same seven questions on the same five files twice. The only difference was whether the class reranker on port 9004 reordered the retrieved slides and pages. Everything else stayed the same: keyword search, class text embeddings, class visual embeddings, and the vision model. We judged correctness by hand against the answers above. Times are single runs measured from asking to receiving the answer, after the files were indexed, and they move around with how busy the class servers are.
 
 | | Reranking on | Reranking off |
 |---|---|---|
-| Fully correct | 9 of 10 | 8 of 10 |
-| Partly correct | 1 (question 9) | 2 (questions 4 and 9) |
-| Expected slide returned as the first source | 9 of 9 answerable questions | 9 of 9 answerable questions |
+| Fully correct | 7 of 7 | 6 of 7 |
+| Partly correct | 0 | 1 (question 1) |
+| Expected slide or page returned | 6 of 6 answerable questions | 6 of 6 answerable questions |
+| Sources support the answer | Yes for all six | Yes for five; question 1 is missing the branching slide |
 | Unanswerable question refused | Yes | Yes |
-| Median time per question | 8.7 seconds | 5.3 seconds |
+| Median time per question | 13.9 seconds | 7.6 seconds |
 
-| Question | Reranking on: slides returned, seconds | Reranking off: slides returned, seconds |
+| Question | Reranking on: sources returned, seconds | Reranking off: sources returned, seconds |
 |---|---|---|
-| 1 | Week 2 slide 4, 8.2 | Week 2 slide 4, 3.1 |
-| 2 | Week 2 slides 18 and 15, 12.0 | Week 2 slide 18 and Week 4 slide 13, 5.4 |
-| 3 | Week 3 slides 10 and 6, 8.9 | Week 3 slides 10 and 6, 6.7 |
-| 4 | Week 4 slides 26 and 25, 10.0 | Week 4 slides 26 and 21, 5.4 |
-| 5 | Week 5 slides 16 and 17, 8.5 | Week 5 slides 16 and 17, 4.7 |
-| 6 | Week 2 slides 33 and 30, 7.5 | Week 2 slides 33 and 2, 5.2 |
-| 7 | Week 5 slides 7 and 3, 9.5 | Week 5 slides 7 and 19, 7.4 |
-| 8 | Week 5 slides 18 and 9, 7.4 | Week 5 slides 18 and 11, 4.5 |
-| 9 | Week 3 slides 23 and 13, 10.9 | Week 3 slides 23 and 20, 5.9 |
-| 10 | none, 3.1 | none, 1.2 |
+| 1 | Week 4 slide 26, Week 4 slide 25, 16.6 | Week 4 slide 26, Week 4 slide 21, 6.7 |
+| 2 | Week 5 slide 16, Week 5 slide 17, 13.5 | Week 5 slide 16, Week 5 slide 17, 9.2 |
+| 3 | Syllabus page 2, 13.9 | Syllabus page 3, Syllabus page 2, 7.6 |
+| 4 | Syllabus page 2, Syllabus page 3, 7.0 | Syllabus page 2, Syllabus page 3, 2.4 |
+| 5 | Week 2 slide 33, Week 2 slide 30, 11.2 | Week 2 slide 33, Week 2 slide 2, 8.7 |
+| 6 | Week 5 slide 7, Week 5 slide 3, 15.8 | Week 5 slide 7, Week 5 slide 19, 9.3 |
+| 7 | none, 15.6 | none, 4.4 |
 
-Reranking did not change which slide came first. Fusing the keyword, text, and visual searches already put the expected slide on top for every answerable question. What reranking changed was the second source. In question 4 it brought in the branching slide, which turned a partial answer into a complete one. In question 2 it replaced an unrelated Week 4 slide with the quantization slide, which is on topic. It cost about three and a half seconds per question.
+Reranking did not change whether the main slide or page was found. Combining the keyword, text, and visual searches was already enough for that. What reranking changed was the supporting source and the order. In question 1 it brought in the branching slide, which turned a partial answer into a complete one; without it the app returned a slide about letting a coding agent run GitHub commands, which does not cover branching. In question 3 it put the grading table first, where without it the answer opened with late policy text and only then gave the grade breakdown. The cost was about 6 extra seconds per question in this run.
 
-We would keep reranking on. A study tool that returns the second slide a student needs is worth a few extra seconds, and the reranker is the only step that judges each slide image against the question. If speed mattered more, for example with many students using the app at once, turning it off would still give the right first slide.
+We would keep reranking on. A study tool that returns the second slide a student needs, in a sensible order, is worth the wait, and the reranker is the only step that judges each slide image against the question. If speed mattered more, for example with many students using the app at once, turning it off would still find the right main source.
 
-### What these ten questions tell us
+### What these seven questions tell us
 
-With the class services on, the assistant found the right slide and showed the original image for all nine answerable questions, fully answered eight of them, partly answered one, and correctly refused the one it had no evidence for. Two limits are worth knowing. The text part of every answer was slide text read back, not a rewritten explanation, so answers to broad questions can run long. And the picture description is written per slide, not per question, so a specific detail inside a table or chart can be missing even when the right slide is on screen. For those, a student should read the slide image the app returns.
+With the class services on, the assistant found the right slide or page and showed the original image for all six answerable questions, and it refused the one question it had no evidence for. Three limits are worth knowing.
+
+First, the text part of every answer was material read back from the source, not a rewritten explanation, so answers to broad questions can run long. The class answer model does write clear, cited answers, but the app only accepts wording that closely matches the source and otherwise falls back to reading the source back.
+
+Second, the picture description is written once per slide and is not tailored to the question. In an earlier test outside this set, a question about one row of a table that was pasted in as an image returned the right slide but left that row out of the description. For details like that, a student should read the slide image the app returns.
+
+Third, refusing unanswerable questions depends on the class answer model being reachable. Without it the app falls back to keyword rules, and those rules are what let the Quiz 1 question through before the fix.

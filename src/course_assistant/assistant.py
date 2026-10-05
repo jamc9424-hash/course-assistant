@@ -8,6 +8,8 @@ from .quiz import build_quiz, build_generated_quiz
 from .services import ServiceReranker, image_path_to_data_url
 from .retrieval import HybridRetriever, KeywordIndex, LocalEmbeddingIndex, _tokens, build_service_retriever
 
+_NOT_FOUND = "I could not find that information in the selected course materials."
+
 _FACT_INTENTS = {
     "deadline": ("deadline", "due", "date", "submit by"),
     "weight": ("weight", "percent", "percentage", "%", "worth"),
@@ -144,6 +146,11 @@ class CourseAssistant:
             answer = generator(question, evidence)
             if not answer:
                 return None
+            # The model is told to reply with this exact sentence when the evidence cannot answer
+            # the question. Honor that verdict instead of falling back to reading a loosely
+            # matching page aloud (for example a schedule that merely mentions "Quiz 1").
+            if answer.strip().casefold().startswith(_NOT_FOUND.casefold()[:40]):
+                return _NOT_FOUND
             citations = [int(number) for number in re.findall(r"\[(\d+)\]", answer)]
             # A shared word is not evidence of entailment. Require explicit,
             # in-range provenance; otherwise use the extractive fallback.

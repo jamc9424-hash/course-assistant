@@ -174,3 +174,32 @@ def test_assistant_prefers_vision_description_and_falls_back_to_the_parser(tmp_p
 
     assert CourseAssistant([], None, Both())._describe_visual(source) == "Vision model description."
     assert CourseAssistant([], None, VisionDown())._describe_visual(source) == "Parser text."
+
+
+def test_model_refusal_is_honored_even_when_keywords_overlap():
+    """The schedule mentions "Quiz 1", but nothing states a class average. When the answer model
+    says it cannot find the information, the app must say so and cite nothing."""
+    from course_assistant.assistant import CourseAssistant
+    from course_assistant.ingest import ingest_text
+
+    class RefusingModel:
+        def embed_text(self, texts):
+            raise RuntimeError("embeddings not needed for this test")
+
+        def generate_answer(self, question, evidence):
+            return "I could not find that information in the selected course materials."
+
+    chunk = ingest_text("Week 6 schedule: Quiz 1 and Assignment 1 review in class, followed by a hands-on lab.", "syllabus.txt")[0]
+    response = CourseAssistant.from_chunks([chunk], service_client=RefusingModel()).ask("What was the class average on Quiz 1?")
+    assert response.answer == "I could not find that information in the selected course materials."
+    assert not response.sources
+
+    class AnsweringModel:
+        def embed_text(self, texts):
+            raise RuntimeError("embeddings not needed for this test")
+
+        def generate_answer(self, question, evidence):
+            return "Quiz 1 and Assignment 1 review in class [1]."
+
+    answered = CourseAssistant.from_chunks([chunk], service_client=AnsweringModel()).ask("When is Quiz 1 and the Assignment 1 review?")
+    assert answered.sources and "Quiz 1" in answered.answer
