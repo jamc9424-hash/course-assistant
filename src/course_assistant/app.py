@@ -103,51 +103,111 @@ def _score(quiz: Quiz | None, answers_json: str, reveal_question_id: str) -> str
         return json.dumps({"error": f"answers must be a JSON object of question_id to choice index: {exc}"})
 
 
+QUIZLET_CSS = """
+:root {
+  --study-blue: #4255ff;
+  --study-blue-dark: #2938c7;
+  --study-ink: #17213a;
+  --study-muted: #64708b;
+  --study-line: #e5e9f2;
+  --study-bg: #f6f7fb;
+  --study-card: #ffffff;
+  --study-green: #17834b;
+}
+body, .gradio-container { background: var(--study-bg) !important; color: var(--study-ink) !important; }
+.gradio-container { max-width: 1240px !important; margin: 0 auto !important; }
+#study-header { margin: -16px -16px 0; padding: 18px 34px; background: #fff; border-bottom: 1px solid var(--study-line); }
+.study-nav { display: flex; align-items: center; justify-content: space-between; gap: 18px; max-width: 1170px; margin: auto; }
+.study-brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: -.03em; font-size: 21px; }
+.study-logo { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--study-blue); color: white; font-size: 18px; box-shadow: 0 5px 14px #4255ff35; }
+.study-nav-note { color: var(--study-muted); font-size: 13px; font-weight: 600; }
+#study-shell { max-width: 1170px; margin: auto; }
+.study-hero { padding: 42px 4px 28px; }
+.study-kicker { color: var(--study-blue); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; }
+.study-hero h1 { color: var(--study-ink); font-size: 38px; line-height: 1.05; letter-spacing: -.045em; margin: 0 0 12px; }
+.study-hero p { color: var(--study-muted); max-width: 720px; font-size: 16px; line-height: 1.55; margin: 0; }
+.study-card { background: var(--study-card); border: 1px solid var(--study-line); border-radius: 18px; padding: 22px; box-shadow: 0 8px 24px #17213a0b; margin-bottom: 18px; }
+.study-card h2 { color: var(--study-ink); font-size: 19px; margin: 0 0 5px; letter-spacing: -.02em; }
+.study-card .study-help { color: var(--study-muted); font-size: 13px; margin-bottom: 15px; }
+.study-section-label { color: var(--study-muted); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; margin: 2px 0 9px; }
+.study-upload { border: 1.5px dashed #b9c2ff !important; background: #f8f9ff !important; border-radius: 14px !important; }
+.study-upload:hover { border-color: var(--study-blue) !important; background: #f2f4ff !important; }
+button.primary { background: var(--study-blue) !important; border-color: var(--study-blue) !important; color: white !important; font-weight: 750 !important; border-radius: 10px !important; }
+button.primary:hover { background: var(--study-blue-dark) !important; border-color: var(--study-blue-dark) !important; }
+button.secondary { border-radius: 10px !important; font-weight: 700 !important; }
+textarea, input, .input-container, .gr-box { border-radius: 10px !important; }
+.tab-nav { border-bottom: 1px solid var(--study-line) !important; gap: 22px; }
+.tab-nav button { color: var(--study-muted) !important; font-weight: 750 !important; border: 0 !important; }
+.tab-nav button.selected { color: var(--study-blue) !important; border-bottom: 3px solid var(--study-blue) !important; }
+.study-output { border-radius: 14px !important; border: 1px solid var(--study-line) !important; }
+.study-tip { color: var(--study-muted); font-size: 12px; line-height: 1.45; padding-top: 8px; }
+@media (max-width: 700px) { .study-hero h1 { font-size: 30px; } #study-header { padding: 16px 20px; } .study-nav-note { display: none; } .study-card { padding: 16px; } }
+"""
+
+
 def build_app():
     try:
         import gradio as gr
     except ImportError as exc:
         raise RuntimeError("Install the optional UI dependencies before launching the Gradio app") from exc
 
-    with gr.Blocks(title="Course Assistant") as demo:
-        gr.Markdown(
-            "# Course Assistant\n"
-            "Upload PDF, PPTX, PPT, ODP, DOCX, TXT, or Markdown course files. "
-            "PPT/PPTX/ODP slide images are rendered automatically when LibreOffice is installed; "
-            "otherwise PPTX text and slide metadata remain available. Uploading the same content twice is skipped. "
-            "Remove a document at any time; its searchable text and generated images are removed from this session."
+    with gr.Blocks(title="Course Assistant | Study smarter") as demo:
+        gr.HTML(
+            """<div id="study-header"><div class="study-nav">
+            <div class="study-brand"><span class="study-logo">✦</span><span>Course Assistant</span></div>
+            <div class="study-nav-note">Your focused study workspace</div>
+            </div></div>"""
         )
-        store_state = gr.State(MaterialStore())
-        files = gr.File(file_count="multiple", type="filepath", label="Add course materials")
-        materials_view = gr.JSON(label="Uploaded materials")
-        upload_status = gr.Markdown()
-        files.upload(_add_files, [files, store_state], [store_state, materials_view, upload_status])
-        with gr.Row():
-            remove_id = gr.Textbox(label="Document ID to remove")
-            remove_button = gr.Button("Remove document")
-        remove_button.click(_remove_file, [remove_id, store_state], [store_state, materials_view, upload_status])
-
-        material = gr.Textbox(label="Material filename filter (optional)")
-        topic = gr.Textbox(label="Topic filter (optional)")
-        with gr.Tab("Ask"):
-            question = gr.Textbox(label="Question")
-            answer = gr.JSON(label="Answer and sources")
-            evidence_image = gr.Gallery(label="Retrieved slide images", columns=2, height="auto")
-            gr.Button("Answer").click(_answer, [store_state, material, topic, question], [answer, evidence_image])
-        with gr.Tab("Practice quiz"):
-            count = gr.Number(value=5, minimum=1, maximum=20, precision=0, label="Question count")
-            quiz_output = gr.Code(label="Quiz JSON (solutions hidden)", language="json")
-            quiz_state = gr.State(None)
-            gr.Button("Generate quiz").click(_quiz, [store_state, material, topic, count], [quiz_output, quiz_state])
-            answers = gr.Code(value="{}", label="Answers JSON, e.g. {\"q1\": 0}", language="json")
-            reveal_id = gr.Textbox(label="Request solution for question ID (optional)")
-            score = gr.Code(label="Score and feedback", language="json")
-            gr.Button("Score quiz / show answered feedback").click(_score, [quiz_state, answers, reveal_id], score)
+        with gr.Column(elem_id="study-shell"):
+            gr.HTML(
+                """<div class="study-hero"><div class="study-kicker">Learn with your course materials</div>
+                <h1>Turn your notes into momentum.</h1>
+                <p>Upload your course content, ask grounded questions, and build practice quizzes with evidence you can trust.</p></div>"""
+            )
+            store_state = gr.State(MaterialStore())
+            with gr.Group(elem_classes="study-card"):
+                gr.Markdown("## 1. Build your study set", elem_classes="study-heading")
+                gr.Markdown("Add slides, readings, and notes. Duplicate files are skipped automatically.", elem_classes="study-help")
+                gr.Markdown("COURSE MATERIALS", elem_classes="study-section-label")
+                files = gr.File(file_count="multiple", type="filepath", label="Drop files here or browse", elem_classes="study-upload")
+                materials_view = gr.JSON(label="Your study set", elem_classes="study-output")
+                upload_status = gr.Markdown()
+                files.upload(_add_files, [files, store_state], [store_state, materials_view, upload_status])
+                with gr.Row():
+                    remove_id = gr.Textbox(label="Document ID to remove", scale=3)
+                    remove_button = gr.Button("Remove from set", variant="secondary", scale=1)
+                remove_button.click(_remove_file, [remove_id, store_state], [store_state, materials_view, upload_status])
+            with gr.Group(elem_classes="study-card"):
+                gr.Markdown("## 2. Study your way", elem_classes="study-heading")
+                gr.Markdown("Choose a material or topic filter, then ask a question or practice what you know.", elem_classes="study-help")
+                with gr.Row():
+                    material = gr.Textbox(label="Material filename (optional)", placeholder="e.g. Week 2 slides")
+                    topic = gr.Textbox(label="Topic filter (optional)", placeholder="e.g. prompt engineering")
+                with gr.Tabs():
+                    with gr.Tab("Ask a question"):
+                        question = gr.Textbox(label="What do you want to understand?", placeholder="Ask about a concept, diagram, chart, or slide…", lines=3)
+                        ask_button = gr.Button("Ask Course Assistant", variant="primary")
+                        answer = gr.JSON(label="Answer and sources", elem_classes="study-output")
+                        evidence_image = gr.Gallery(label="Retrieved visual evidence", columns=2, height="auto", elem_classes="study-output")
+                        ask_button.click(_answer, [store_state, material, topic, question], [answer, evidence_image])
+                    with gr.Tab("Practice quiz"):
+                        with gr.Row():
+                            count = gr.Number(value=5, minimum=1, maximum=20, precision=0, label="Number of questions")
+                            quiz_button = gr.Button("Create practice quiz", variant="primary")
+                        quiz_output = gr.Code(label="Practice questions · solutions hidden", language="json", elem_classes="study-output")
+                        quiz_state = gr.State(None)
+                        quiz_button.click(_quiz, [store_state, material, topic, count], [quiz_output, quiz_state])
+                        answers = gr.Code(value="{}", label="Your answers JSON · e.g. {\"q1\": 0}", language="json")
+                        reveal_id = gr.Textbox(label="Reveal one solution (optional question ID)", placeholder="e.g. q1")
+                        score_button = gr.Button("Check answers", variant="primary")
+                        score = gr.Code(label="Score and feedback", language="json", elem_classes="study-output")
+                        score_button.click(_score, [quiz_state, answers, reveal_id], score)
+                gr.Markdown("Sources stay attached to answers and feedback so you can review the original material.", elem_classes="study-tip")
     return demo
 
 
 def main() -> None:
-    launch_kwargs = {"server_name": os.getenv("GRADIO_SERVER_NAME", "0.0.0.0")}
+    launch_kwargs = {"server_name": os.getenv("GRADIO_SERVER_NAME", "0.0.0.0"), "css": QUIZLET_CSS}
     port = os.getenv("PORT") or os.getenv("GRADIO_SERVER_PORT")
     if port:
         try:
