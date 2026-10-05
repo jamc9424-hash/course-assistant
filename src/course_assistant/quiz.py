@@ -30,6 +30,8 @@ def _question_prompt(statement: str) -> str:
     subject_words: list[str] = []
     for word in words:
         cleaned = re.sub(r"[^A-Za-z0-9'-]", "", word)
+        if cleaned.casefold() in {"a", "an", "the"} and not subject_words:
+            continue
         if cleaned.casefold() in {
             "is", "are", "was", "were", "uses", "use", "shows", "show", "includes", "contains", "lists",
             "split", "splits", "combine", "combines", "connects", "connect", "decrease", "decreases",
@@ -42,7 +44,7 @@ def _question_prompt(statement: str) -> str:
             break
     subject = " ".join(subject_words).strip()
     if subject:
-        return f"What does the material say about {subject.casefold()}?"
+        return f"Which statement best describes {subject.casefold()}?"
     return "Which statement is directly supported by the selected course material?"
 
 
@@ -61,7 +63,10 @@ def build_quiz(chunks: list[DocumentChunk], question_count: int = 5, seed: int =
     rng.shuffle(candidates)
     questions: list[QuizQuestion] = []
     for index, (chunk, correct) in enumerate(candidates[:question_count]):
-        distractors = [sentence for other, sentence in candidates if sentence != correct]
+        distractors = [
+            sentence for other, sentence in candidates
+            if sentence != correct and _focus_phrase(sentence) != _focus_phrase(correct)
+        ]
         distractors = distractors[:3]
         choices = [correct, *distractors]
         rng.shuffle(choices)

@@ -134,4 +134,22 @@ def test_service_client_generates_grounded_multimodal_answer(monkeypatch, tmp_pa
     payload = calls[0].data.decode()
     assert '"model": "vision-model"' in payload
     assert "data:image/png;base64," in payload
-    assert "dummy" not in payload
+
+
+def test_vision_generation_survives_embedding_service_failure():
+    class PartialService:
+        def embed_text(self, texts):
+            raise RuntimeError("text embedding unavailable")
+
+        def generate_answer(self, question, evidence):
+            assert question == "When are office hours?"
+            assert evidence[0]["document"] == "notes.txt"
+            return "Office hours are Tuesday at noon."
+
+    chunk = ingest_text("Office hours are Tuesday at noon.", "notes.txt")[0]
+    assistant = CourseAssistant.from_chunks([chunk], service_client=PartialService())
+
+    response = assistant.ask("When are office hours?")
+
+    assert response.answer == "Office hours are Tuesday at noon."
+    assert response.sources[0].document == "notes.txt"

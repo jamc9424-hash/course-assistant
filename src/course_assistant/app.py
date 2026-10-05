@@ -10,7 +10,26 @@ from .models import Quiz
 from .services import ClassServiceClient, ServiceSettings
 
 
+def _load_local_environment() -> None:
+    """Load simple ignored .env values without exposing them to the UI."""
+    env_path = os.getenv("COURSE_ASSISTANT_ENV_FILE", ".env")
+    try:
+        with open(env_path, encoding="utf-8") as env_file:
+            lines = env_file.read().splitlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        name, value = name.strip(), value.strip().strip("\"'")
+        if name and name not in os.environ:
+            os.environ[name] = value
+
+
 def _service_client() -> ClassServiceClient | None:
+    _load_local_environment()
     settings = ServiceSettings.from_env()
     if not settings.api_key or settings.api_key == "replace-with-local-dummy-value":
         return None

@@ -30,7 +30,8 @@ class CourseAssistant:
                     LocalEmbeddingIndex.from_chunks(text_chunks) if text_chunks else None,
                     LocalEmbeddingIndex.from_chunks(visual_chunks) if visual_chunks else None,
                 )
-                service_client = None
+                # Keep the client so 9001 answer generation and 9005 visual parsing
+                # remain available when an optional embedding service is down.
         else:
             retriever = HybridRetriever(
                 KeywordIndex(text_chunks),

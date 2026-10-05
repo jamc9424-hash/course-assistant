@@ -126,7 +126,7 @@ def test_quiz_answer_key_is_fixed_and_solution_is_hidden_until_reveal():
 
     assert quiz.questions[0].explanation is None
     assert score_quiz(quiz, {}) == {"score": 0, "total": 1, "answered": 0}
-    assert "Which statement" not in quiz.questions[0].prompt
+    assert "selected course material" not in quiz.questions[0].prompt
     revealed = reveal_solution(quiz, 0)
     assert revealed.correct_choice == key_before
     assert revealed.explanation
