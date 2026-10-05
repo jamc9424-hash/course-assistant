@@ -117,6 +117,17 @@ def test_generated_quiz_rejects_unanchored_correct_answer_and_duplicate_choices(
         })
 
 
+def test_generated_quiz_rejects_prompt_that_contains_the_key():
+    chunks = ingest_text("Decision trees split records using feature thresholds.", "notes.txt")
+    with pytest.raises(ValueError, match="verifiable"):
+        build_generated_quiz(chunks, lambda text, image_path=None: {
+            "prompt": "Why are feature thresholds used in decision trees?",
+            "correct": "feature thresholds",
+            "distractors": ["random labels", "calendar dates", "student names"],
+            "explanation": "Feature thresholds split records.",
+        })
+
+
 def test_generated_quiz_rejects_distractor_found_elsewhere_in_materials():
     chunks = [*ingest_text("Decision trees split records using feature thresholds.", "notes.txt"),
               *ingest_text("Regression models use calendar dates as predictors.", "notes2.txt")]
@@ -175,6 +186,31 @@ def test_model_cannot_add_unsupported_nonnumeric_claim():
     chunks = ingest_text("Office hours are Tuesday at noon.", "notes.txt")
     answer = CourseAssistant.from_chunks(chunks, Fake()).ask("When are office hours?")
     assert "mandatory" not in answer.answer
+
+
+def test_model_cannot_reorder_words_into_contradictory_cited_claim():
+    class Fake:
+        def embed_text(self, texts):
+            raise RuntimeError("offline")
+
+        def generate_answer(self, question, evidence):
+            return "Tuesday office hours are canceled [1]."
+
+    chunks = ingest_text("Office hours are Tuesday at noon and canceled meetings are emailed.", "notes.txt")
+    answer = CourseAssistant.from_chunks(chunks, Fake()).ask("When are office hours?")
+    assert "Tuesday office hours are canceled" not in answer.answer
+
+
+def test_fallback_does_not_append_visual_description_from_unselected_source():
+    from dataclasses import replace
+    text = ingest_text("Office hours are Tuesday at noon.", "notes.txt")[0].source
+    visual = ingest_text("A chart shows budget allocation.", "charts.pdf", image_path="chart.png")[0].source
+    visual = replace(visual, visual_description="A pie chart shows red and blue segments.")
+    answer, sources = CourseAssistant.from_chunks([])._local_grounded_answer(
+        "When are office hours?", [text, visual]
+    )
+    assert "pie chart" not in answer
+    assert len(sources) == 1 and sources[0].document == "notes.txt"
 
 
 def test_scanned_visual_page_uses_remote_visual_retrieval_and_cites_image(tmp_path):

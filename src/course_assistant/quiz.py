@@ -111,7 +111,8 @@ def build_generated_quiz(
             continue
         if len(prompt) > 300 or len(correct) > 100 or len(explanation) > 500:
             continue
-        if correct.casefold() not in chunk.text.casefold() or prompt.casefold() in seen:
+        if (correct.casefold() not in chunk.text.casefold() or prompt.casefold() in seen
+                or correct.casefold() in prompt.casefold()):
             continue
         if len({choice.casefold().strip() for choice in [correct, *distractors]}) != 4:
             continue

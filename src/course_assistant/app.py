@@ -347,11 +347,12 @@ def build_app():
                         quiz_output = gr.Markdown("Your practice questions will appear here.", elem_classes="study-output")
                         quiz_state = gr.State(None)
                         answer_controls = [gr.Radio(choices=[], visible=False, label=f"Question {index + 1}") for index in range(20)]
-                        quiz_button.click(_quiz_choices, [store_state, material, topic, count], [quiz_output, quiz_state, *answer_controls])
+                        quiz_event = quiz_button.click(_quiz_choices, [store_state, material, topic, count], [quiz_output, quiz_state, *answer_controls])
                         reveal_id = gr.Textbox(label="Reveal one solution (optional question ID)", placeholder="e.g. q1")
                         score_button = gr.Button("Check answers", variant="primary")
                         score = gr.Markdown("Your score and feedback will appear here.", elem_classes="study-output")
                         score_button.click(_score_choices, [quiz_state, reveal_id, *answer_controls], score)
+                        quiz_event.then(lambda: ("", ""), outputs=[score, reveal_id])
                         clear_outputs = [quiz_state, quiz_output, score, reveal_id, *answer_controls]
                         upload_event.then(_clear_practice, outputs=clear_outputs)
                         remove_event.then(_clear_practice, outputs=clear_outputs)

@@ -146,6 +146,14 @@ class CourseAssistant:
             # shared keyword cannot license a new factual assertion.
             if answer_terms - supported_terms - {"according", "source", "material", "means", "because", "therefore", "this", "that", "it"}:
                 return None
+            # Lexical overlap also licenses reordered contradictory claims.
+            # Accept only contiguous wording from cited evidence; otherwise
+            # fall back to extraction rather than assert entailment.
+            normalized_support = re.sub(r"[^a-z0-9]+", " ", supported.casefold()).strip()
+            for clause in re.split(r"\[\d+\]", answer):
+                normalized_clause = re.sub(r"[^a-z0-9]+", " ", clause.casefold()).strip()
+                if normalized_clause and normalized_clause not in normalized_support:
+                    return None
             # Numerical claims (deadlines, amounts, weights) cannot be
             # licensed by citing an unrelated sentence.
             numbers = set(re.findall(r"\b\d+(?:\.\d+)?\b", answer)) - set(map(str, citations))
@@ -155,7 +163,7 @@ class CourseAssistant:
         except (OSError, RuntimeError, KeyError, IndexError, TypeError):
             return None
 
-    def _local_grounded_answer(self, question: str, sources: list[SourceEvidence], visual_explanations: list[str]) -> tuple[str, list[SourceEvidence]]:
+    def _local_grounded_answer(self, question: str, sources: list[SourceEvidence]) -> tuple[str, list[SourceEvidence]]:
         query_terms = set(_tokens(question))
         ranked: list[tuple[int, str, SourceEvidence]] = []
         for source in sources:
@@ -175,8 +183,10 @@ class CourseAssistant:
         answer = "From the course material: " + " ".join(
             f"{sentence} [{index}]" for index, (sentence, _) in enumerate(selected, 1)
         )
-        if visual_explanations:
-            answer += "\n\nVisual description (model-generated; check the original image): " + visual_explanations[0]
+        described = [source.visual_description for _, source in selected
+                     if source.image_path and source.visual_description]
+        if described:
+            answer += "\n\nVisual description (model-generated; check the original image): " + described[0]
         return answer, [source for _, source in selected]
 
     def ask(self, question: str, material: str | None = None, topic: str | None = None) -> AnswerResponse:
@@ -213,7 +223,6 @@ class CourseAssistant:
         ]
         results = (results if visual_only else matching_results or results[:1])[:4]
         sources = []
-        visual_explanations = []
         for item in results:
             source = item.chunk.source
             if not visual_only:
@@ -224,13 +233,12 @@ class CourseAssistant:
             description = self._describe_visual(source)
             if description:
                 source = replace(source, visual_description=description)
-                visual_explanations.append(description)
             sources.append(source)
         if not sources:
             return AnswerResponse("I could not find that information in the selected course materials.", ())
         answer = self._generate_grounded_answer(question, sources)
         if answer is None:
-            answer, sources = self._local_grounded_answer(question, sources, visual_explanations)
+            answer, sources = self._local_grounded_answer(question, sources)
         else:
             cited = {int(number) for number in re.findall(r"\[(\d+)\]", answer)}
             positions = {original: new for new, original in enumerate(sorted(cited), 1)}

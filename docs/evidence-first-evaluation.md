@@ -18,7 +18,7 @@
 
 ## Reproduction and evidence
 
-Run `PYTHONPATH=src python -m pytest -q` and `python -m compileall -q src`. The latest local run passed **57 tests** and compiled successfully. Tests use synthetic local text and fake service boundaries; no class credential is stored or called. A Gradio-client integration smoke test on port 7861 uploaded synthetic text, returned the office-hours sentence with a numbered citation, abstained on an unsupported final-project deadline, generated two selectable radio questions, graded submitted choices with the matching narrow source sentence, and reset the session. This is workflow evidence, not a course-material quality benchmark.
+Run `PYTHONPATH=src python -m pytest -q` and `python -m compileall -q src`. The latest local run passed **60 tests** and compiled successfully. Tests use synthetic local text and fake service boundaries; no class credential is stored or called. A Gradio-client integration smoke test on port 7861 uploaded synthetic text, returned the office-hours sentence with a numbered citation, abstained on an unsupported final-project deadline, generated two selectable radio questions, graded submitted choices with the matching narrow source sentence, and reset the session. This is workflow evidence, not a course-material quality benchmark.
 
 ## Not yet validated
 
