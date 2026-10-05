@@ -89,6 +89,7 @@ def build_generated_quiz(
         raise ValueError("question count must be positive")
     rng = random.Random(seed)
     candidates = [chunk for chunk in chunks if chunk.text and not _PLACEHOLDER.fullmatch(chunk.text.strip())]
+    corpus_text = " ".join(chunk.text for chunk in chunks).casefold()
     rng.shuffle(candidates)
     questions: list[QuizQuestion] = []
     seen: set[str] = set()
@@ -114,7 +115,7 @@ def build_generated_quiz(
             continue
         if len({choice.casefold().strip() for choice in [correct, *distractors]}) != 4:
             continue
-        if any(value.casefold() in chunk.text.casefold() for value in distractors):
+        if any(value.casefold() in corpus_text for value in distractors):
             continue
         seen.add(prompt.casefold())
         choices = [correct, *distractors]

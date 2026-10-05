@@ -117,6 +117,17 @@ def test_generated_quiz_rejects_unanchored_correct_answer_and_duplicate_choices(
         })
 
 
+def test_generated_quiz_rejects_distractor_found_elsewhere_in_materials():
+    chunks = [*ingest_text("Decision trees split records using feature thresholds.", "notes.txt"),
+              *ingest_text("Regression models use calendar dates as predictors.", "notes2.txt")]
+    with pytest.raises(ValueError, match="verifiable"):
+        build_generated_quiz(chunks, lambda text, image_path=None: {
+            "prompt": "What do decision trees use to split records?", "correct": "feature thresholds",
+            "distractors": ["calendar dates", "random labels", "student names"],
+            "explanation": "Trees split on feature thresholds.",
+        })
+
+
 def test_assistant_prefers_concept_quiz_when_service_available():
     class Fake:
         def embed_text(self, texts):
