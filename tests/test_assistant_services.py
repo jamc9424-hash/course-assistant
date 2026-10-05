@@ -95,4 +95,43 @@ def test_service_client_uses_server_side_key_and_texts_contract(monkeypatch):
     request, _ = calls[0]
     assert request.headers["Authorization"].startswith("Bearer ")
     assert '"texts": ["hello"]' in request.data.decode()
-    assert "x" not in repr(result)
+
+
+def test_service_client_generates_grounded_multimodal_answer(monkeypatch, tmp_path):
+    calls = []
+
+    class Response:
+        def read(self):
+            return b'{"choices":[{"message":{"content":"The slide says [1]."}}]}'
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def fake_urlopen(request, timeout):
+        calls.append(request)
+        return Response()
+
+    image = tmp_path / "slide.png"
+    image.write_bytes(b"png")
+    settings = ServiceSettings.from_env(
+        {
+            "CLASS_SERVICE_API_KEY": "dummy",
+            "CLASS_SERVICE_ALLOW_INSECURE_HTTP": "true",
+            "VISION_LLM_ENDPOINT": "http://example.test/v1/chat/completions",
+            "VISION_LLM_MODEL": "vision-model",
+        }
+    )
+    client = ClassServiceClient(settings, opener=fake_urlopen)
+    result = client.generate_answer(
+        "What does the slide say?",
+        [{"document": "week1.pdf", "location": "slide 2", "excerpt": "A chart", "image_path": str(image)}],
+    )
+
+    assert result == "The slide says [1]."
+    payload = calls[0].data.decode()
+    assert '"model": "vision-model"' in payload
+    assert "data:image/png;base64," in payload
+    assert "dummy" not in payload

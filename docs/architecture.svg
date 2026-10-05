@@ -9,7 +9,7 @@
   <rect width="1440" height="860" fill="#020617"/>
   <rect width="1440" height="860" fill="url(#grid)" opacity=".55"/>
   <text x="70" y="66" fill="#f8fafc" font-family="Arial, sans-serif" font-size="30" font-weight="700">Course Assistant · Hybrid Multimodal RAG</text>
-  <text x="70" y="96" fill="#94a3b8" font-family="Arial, sans-serif" font-size="15">JamesBranch architecture · Python + Gradio · class services remain server-side</text>
+  <text x="70" y="96" fill="#94a3b8" font-family="Arial, sans-serif" font-size="15">Integrated final architecture · Python + Gradio · class services remain server-side</text>
 
   <g stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arrow)">
     <path d="M230 245H330"/><path d="M230 285H330"/><path d="M230 325H330"/>
@@ -37,7 +37,7 @@
 
     <rect x="820" y="115" width="180" height="340" rx="10" fill="#0f172a" stroke="#a78bfa" stroke-width="2"/>
     <text x="845" y="150" fill="#a78bfa" font-size="17" font-family="Arial" font-weight="700">Class services</text>
-    <text x="845" y="190" fill="#cbd5e1" font-size="13" font-family="Arial">9002 · text embed</text><text x="845" y="225" fill="#cbd5e1" font-size="13" font-family="Arial">9003 · visual embed</text><text x="845" y="260" fill="#cbd5e1" font-size="13" font-family="Arial">9004 · reranker</text><text x="845" y="295" fill="#cbd5e1" font-size="13" font-family="Arial">9005 · parser</text><text x="845" y="350" fill="#fda4af" font-size="12" font-family="Arial">API key: server-side only</text><text x="845" y="380" fill="#64748b" font-size="12" font-family="Arial">HTTP opt-in for class network</text>
+    <text x="845" y="190" fill="#cbd5e1" font-size="13" font-family="Arial">9001 · vision answer LLM</text><text x="845" y="220" fill="#cbd5e1" font-size="13" font-family="Arial">9002 · text embed</text><text x="845" y="250" fill="#cbd5e1" font-size="13" font-family="Arial">9003 · visual embed</text><text x="845" y="280" fill="#cbd5e1" font-size="13" font-family="Arial">9004 · reranker</text><text x="845" y="310" fill="#cbd5e1" font-size="13" font-family="Arial">9005 · parser</text><text x="845" y="350" fill="#fda4af" font-size="12" font-family="Arial">API key: server-side only</text><text x="845" y="380" fill="#64748b" font-size="12" font-family="Arial">HTTP opt-in for class network</text>
 
     <rect x="1080" y="205" width="150" height="160" rx="10" fill="#0f172a" stroke="#f97316" stroke-width="2"/>
     <text x="1105" y="240" fill="#fb923c" font-size="17" font-family="Arial" font-weight="700">RAG merge</text>

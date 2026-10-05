@@ -46,7 +46,7 @@ Canvas files
                                                   Python Gradio interface
 ```
 
-The class service map is documented in [`docs/class-services.md`](docs/class-services.md). The four supplied services use ports 9002–9005; endpoint adapters must follow the model cards and vLLM 0.29.0 conventions. Credentials are intentionally not stored here and must be supplied through server-side environment variables or an ignored local configuration file.
+The class service map is documented in [`docs/class-services.md`](docs/class-services.md). The integrated services use ports 9001–9005: 9001 now provides grounded generative vision answers, while 9002–9005 provide text embeddings, multimodal embeddings, reranking, and document parsing. Credentials are intentionally not stored here and must be supplied through server-side environment variables or an ignored local configuration file.
 
 ## Local setup
 
@@ -125,7 +125,7 @@ The implementation provides:
 
 The upload manager accepts PDF, PPTX, PPT, ODP, DOCX, TXT, and Markdown. Unsupported formats are rejected without entering the store, parser failures are reported without leaving partial artifacts, and re-uploading identical bytes is skipped even if the filename changes. Uploads are capped at 150 MB.
 
-The baseline runs without class credentials using keyword retrieval. When `CLASS_SERVICE_API_KEY` is present in the ignored local environment, the assistant uses the configured class text embedding, visual embedding, and reranking services. Document parsing is wired through the service client for future image-first ingestion.
+The baseline runs without class credentials using keyword retrieval. When `CLASS_SERVICE_API_KEY` is present in the ignored local environment, the assistant uses 9001 for grounded multimodal answer synthesis, 9002 for text embeddings, 9003 for visual embeddings, 9004 for multimodal reranking, and 9005 for document parsing. If a service is unavailable, the app falls back to its local evidence-preserving path.
 
 ## Architecture diagram
 
@@ -151,10 +151,10 @@ These screenshots were refreshed from the merged `main` application at commit `0
 
 ## Current findings and limitations
 
-- The live class endpoints were connectivity-tested and their request contracts are documented in `docs/class-services.md`.
-- The current answer generator is extractive and conservative; it does not yet call a generative vision-capable LLM because a generation endpoint was not included in the supplied service map.
+- The integrated answer path can now use the class vision-capable Qwen3.6 service for grounded text-and-image synthesis, while retaining a tested local fallback when the service is unavailable.
+- The retrieval stack is ready for stronger semantic and multimodal recall through Nemotron text embeddings, Qwen3-VL embeddings, and Qwen3-VL reranking; the dependency-light keyword path remains available for offline use.
 - PPT/PPTX/ODP image rendering depends on LibreOffice; without it, PPTX text and source locations still work and manual PDF export is supported.
-- The quiz generator is a deterministic baseline for evaluating retrieval and evidence behavior, not a final pedagogical question writer.
+- The quiz generator is a deterministic baseline for evaluating retrieval and evidence behavior, with stable keys and source-backed feedback; a richer pedagogical writer can be added without changing the evidence contract.
 - Automated tests cover the dependency-light core, security configuration, source validation, answer-key stability, and service request construction. Live service calls are not run in CI.
 - Synthetic app screenshots are committed; course-material benchmark results remain pending because permitted Canvas files were not supplied.
 

@@ -35,8 +35,9 @@ def test_assignment_artifacts_are_present_and_documented():
 def test_class_service_configuration_is_documented_without_key():
     env_example = (ROOT / ".env.example").read_text(encoding="utf-8")
     service_doc = (ROOT / "docs" / "class-services.md").read_text(encoding="utf-8")
-    for endpoint in (":9002/v2/embed", ":9003/v1/embeddings", ":9004/rerank", ":9005/v1/chat/completions"):
+    for endpoint in (":9001/v1/chat/completions", ":9002/v2/embed", ":9003/v1/embeddings", ":9004/rerank", ":9005/v1/chat/completions"):
         assert endpoint in env_example
         assert endpoint in service_doc
+    assert "Qwen3.6-35B-A3B-AWQ-4bit" in service_doc
     assert "64" + "18" not in env_example
     assert "64" + "18" not in service_doc

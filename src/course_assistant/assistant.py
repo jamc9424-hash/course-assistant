@@ -61,6 +61,27 @@ class CourseAssistant:
         except (OSError, RuntimeError, KeyError, IndexError, TypeError):
             return None
 
+    def _generate_grounded_answer(self, question: str, sources: list[SourceEvidence]) -> str | None:
+        if not self.service_client:
+            return None
+        generator = getattr(self.service_client, "generate_answer", None)
+        if generator is None:
+            return None
+        evidence = [
+            {
+                "document": source.document,
+                "location": source.page_or_slide or source.section or "selected material",
+                "excerpt": source.excerpt,
+                "image_path": source.image_path,
+            }
+            for source in sources
+        ]
+        try:
+            answer = generator(question, evidence)
+            return answer or None
+        except (OSError, RuntimeError, KeyError, IndexError, TypeError):
+            return None
+
     def ask(self, question: str, material: str | None = None, topic: str | None = None) -> AnswerResponse:
         allowed = self._filtered_chunks(material, topic)
         if not allowed:
@@ -88,9 +109,11 @@ class CourseAssistant:
                 source = replace(source, visual_description=description)
                 visual_explanations.append(description)
             sources.append(source)
-        answer = "Based on the selected course materials: " + " ".join(source.excerpt for source in sources)
-        if visual_explanations:
-            answer += " Visual evidence explanation: " + " ".join(visual_explanations)
+        answer = self._generate_grounded_answer(question, sources)
+        if answer is None:
+            answer = "Based on the selected course materials: " + " ".join(source.excerpt for source in sources)
+            if visual_explanations:
+                answer += " Visual evidence explanation: " + " ".join(visual_explanations)
         evidence = {}
         for chunk in allowed:
             evidence[chunk.source.document] = evidence.get(chunk.source.document, "") + " " + chunk.text

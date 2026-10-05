@@ -25,6 +25,8 @@ def image_path_to_data_url(path: str) -> str:
 @dataclass(frozen=True)
 class ServiceSettings:
     api_key: str
+    vision_endpoint: str
+    vision_model: str
     text_embedding_endpoint: str
     text_embedding_model: str
     visual_embedding_endpoint: str
@@ -40,6 +42,8 @@ class ServiceSettings:
         values = dict(os.environ if env is None else env)
         return cls(
             api_key=values.get("CLASS_SERVICE_API_KEY", ""),
+            vision_endpoint=values.get("VISION_LLM_ENDPOINT", "http://dobolyi.com:9001/v1/chat/completions"),
+            vision_model=values.get("VISION_LLM_MODEL", "cyankiwi/Qwen3.6-35B-A3B-AWQ-4bit"),
             text_embedding_endpoint=values.get("TEXT_EMBEDDING_ENDPOINT", "http://dobolyi.com:9002/v2/embed"),
             text_embedding_model=values.get("TEXT_EMBEDDING_MODEL", "nvidia/Nemotron-3-Embed-1B-BF16"),
             visual_embedding_endpoint=values.get("VISUAL_EMBEDDING_ENDPOINT", "http://dobolyi.com:9003/v1/embeddings"),
@@ -84,6 +88,46 @@ class ClassServiceClient:
                 return json.loads(response.read().decode("utf-8"))
         except Exception as exc:
             raise RuntimeError(f"class service request failed for {endpoint}") from exc
+
+    def generate_answer(self, question: str, evidence: list[dict[str, Any]]) -> str:
+        """Generate a grounded answer with the class vision-capable LLM."""
+        evidence_blocks: list[str] = []
+        content: list[dict[str, Any]] = []
+        for index, item in enumerate(evidence, start=1):
+            location = item.get("location", "unknown location")
+            excerpt = item.get("excerpt", "")
+            evidence_blocks.append(f"[{index}] {item.get('document', 'document')} — {location}: {excerpt}")
+            image_path = item.get("image_path")
+            if image_path:
+                try:
+                    content.append({"type": "image_url", "image_url": {"url": image_path_to_data_url(image_path)}})
+                except FileNotFoundError:
+                    pass
+        prompt = (
+            "Answer the student's question using only the supplied course evidence. "
+            "Explain uncertainty when the evidence is insufficient. Do not invent facts, "
+            "citations, page numbers, or visual details. Cite evidence inline as [1], [2].\n\n"
+            f"Question: {question}\n\nEvidence:\n" + "\n".join(evidence_blocks)
+        )
+        content.append({"type": "text", "text": prompt})
+        response = self._post(
+            self.settings.vision_endpoint,
+            {
+                "model": self.settings.vision_model,
+                "messages": [{"role": "user", "content": content}],
+                "temperature": 0.2,
+                "max_tokens": 512,
+                "extra_body": {"chat_template_kwargs": {"enable_thinking": False}},
+            },
+        )
+        choices = response.get("choices", [])
+        if not choices:
+            return ""
+        message = choices[0].get("message", {})
+        answer = message.get("content", "")
+        if isinstance(answer, list):
+            answer = " ".join(part.get("text", "") for part in answer if isinstance(part, dict))
+        return str(answer).strip()
 
     def embed_text(self, texts: list[str]) -> list[list[float]]:
         response = self._post(
