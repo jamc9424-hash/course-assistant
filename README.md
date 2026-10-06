@@ -280,3 +280,22 @@ First, the text part of every answer was material read back from the source, not
 Second, the picture description is written once per slide and is not tailored to the question. In an earlier test outside this set, a question about one row of a table that was pasted in as an image returned the right slide but left that row out of the description. For details like that, a student should read the slide image the app returns.
 
 Third, refusing unanswerable questions depends on the class answer model being reachable. Without it the app falls back to keyword rules, and those rules are what let the Quiz 1 question through before the fix.
+
+## Bugs found during testing
+
+These came up while running the app on `main` against the real course decks and the syllabus with the class services turned on. All of them are fixed on `main` unless the status says otherwise.
+
+| # | Bug | What it caused | Status |
+|---|---|---|---|
+| 1 | The text embedding adapter (port 9002) read the reply as a list, but the service nests the vectors under `embeddings.float`. | Every question crashed as soon as the class services were enabled. With the default settings the app silently fell back to offline search instead, which hid the problem. | Fixed |
+| 2 | The visual embedding adapter (port 9003) sent a list of image objects in one request, which the service rejects. | Visual embeddings never ran, so slide images were not searchable by meaning. | Fixed: one image per request |
+| 3 | The reranker adapter (port 9004) sent documents in a format the service rejects, and read scores in reply order instead of by the returned index. | Reranking never ran; once the format was fixed, scores could have been matched to the wrong slides. | Fixed |
+| 4 | The "thinking off" setting for the answer model (port 9001) was sent inside an `extra_body` field, which is an SDK option the server ignores. | The model could spend its token budget on hidden reasoning and return a cut-off or empty answer. | Fixed: sent at the top level |
+| 5 | Slide descriptions were requested from the document parser (port 9005), which is an OCR model. | Long, rambling descriptions with mistakes, for example miscategorized company logos and leftover formatting markup. | Fixed: descriptions now come from the 9001 vision model, parser kept as fallback |
+| 6 | The app rebuilt its search index and re-embedded every slide for each question. | With the class services on, each question took an extra 30 seconds or more of indexing. | Fixed: embeddings and descriptions cached per slide |
+| 7 | When the answer model replied that it could not find the information, the app discarded the reply because it had no citations and read a loosely matching page back instead. | "What was the class average on Quiz 1?" was answered with the syllabus schedule because it mentions Quiz 1. | Fixed: the refusal is honored, with a regression test |
+| 8 | The repository's automated checks on GitHub were failing at test collection because a test imports Pillow and python-pptx, which were not installed. | Every push showed a red check, and no tests ran on GitHub. | Fixed: both added to `requirements.txt` |
+| 9 | The app only accepts a model-written answer when its wording closely matches the source text. | The answer model writes clear, cited answers, but the app discards them and shows the source text read back instead, so answers can be long and hard to read. | Not changed: this is the evidence-first design choice, noted as a limitation |
+| 10 | The picture description is written once per slide and is not tailored to the question. | A question about one row of a table pasted in as an image returned the right slide but left that row out of the description. | Not changed: the slide image is shown so the student can read it |
+
+Earlier, before the class services were fixed, the app in its offline mode also returned the wrong slide for the chunking strategies question and could not describe the meme or the chart at all. Both of those went away once the services were working.
